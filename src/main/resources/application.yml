@@ -1,0 +1,19 @@
+server:
+  port: 11451
+
+spring:
+  application:
+      name: qq-robot-service
+  #开发环境
+  profiles:
+    active: dev
+    include: signInfo
+  #数据库
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${hc.datasource.host}:${hc.datasource.port}/${hc.datasource.db}?serverTimezone=Asia/Shanghai&useSSL=false&useUnicode=true&characterEncoding=utf8
+    username: ${hc.datasource.username}
+    password: ${hc.datasource.password}
+
+
+

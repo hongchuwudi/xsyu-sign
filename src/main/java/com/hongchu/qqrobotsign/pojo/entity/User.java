@@ -45,6 +45,13 @@ public class User implements Serializable {
      */
     private byte[] password;
 
+    private String name;
+
+    /**
+     * 邮箱
+     */
+    private String email;
+
     /**
      * JWT令牌
      */
@@ -61,9 +68,12 @@ public class User implements Serializable {
     private LocalDateTime updatedAt;
 
     // 自动签到时间配置
-    private LocalTime signTimeBegin;  // 签到起始时间
-    private LocalTime signTimeEnd;    // 签到结束时间
     private Integer signRandomDelay;      // 随机延迟时间(秒)
     private LocalDateTime signScheduledTime; // 计划签到时间
+
+    /**
+     * 自动签到
+     */
+    private Boolean autoSign;
 
 }

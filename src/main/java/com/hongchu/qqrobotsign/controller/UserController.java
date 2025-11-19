@@ -1,6 +1,7 @@
 package com.hongchu.qqrobotsign.controller;
 
 
+import com.hongchu.qqrobotsign.result.Result;
 import com.hongchu.qqrobotsign.service.IUserService;
 import com.hongchu.qqrobotsign.service.SignService;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,17 @@ public class UserController {
         // 插入用户信息
         return userService.register(username, psd);
     }
+
+    // 设置自动签到
+    @RequestMapping("/AutoSign/{username}/{isAuto}")
+    public Result<Void> setAutoSign(@RequestParam("username") String username,
+                              @RequestParam("isAuto") Boolean isAuto) {
+        log.info("controller层-设置自动签到-username: {}, isAuto: {}", username, isAuto);
+        userService.update().eq("username", username).set("auto_sign", isAuto);
+        return Result.success();
+    }
+
+
 
     /**
      * 登出

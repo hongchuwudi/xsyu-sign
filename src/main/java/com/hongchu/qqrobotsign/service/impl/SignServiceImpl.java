@@ -23,35 +23,50 @@ public class SignServiceImpl implements SignService {
     @Autowired private BaseSignService baseSignService;
     @Autowired private UserServiceImpl userService;
     @Autowired private SignInfoConfig signInfoConfig;
+    @Autowired private EmailServiceImpl emailService;
     /**
      * 一键签到所有未签到的签到
      * @param username 用户名
      * @return 签到结果
      */
     public String signAll(String username) {
-        log.info("一键签到-username: {}", username);
+        log.info("service层-一键签到-username: {}", username);
 
         // 1. 检查用户是否存在
         User user = userService.getOne(new QueryWrapper<User>().eq("username", username));
         if (user == null) throw new BusinessException("用户不存在,请先登录");
 
-
         // 2. 获取最近10条签到
         Result<List<SignItem>> signResult = baseSignService.getAllSign(username, 1, 10);
-        if (signResult.getCode() != 200 || signResult.getData() == null) {
-            return "获取签到列表失败";
+
+        // 3. 检查JWS是否失效
+        if (Objects.equals(signResult.getMessage(), "未登录,请重新登录")){
+            userService.refreshJws(username);
+            signResult = baseSignService.getAllSign(username, 1, 10);
         }
+
+        // 4.如果刷新JWS后再次获取失败,直接返回错误
+        if (!Objects.equals(signResult.getMessage(), ""))
+            return "获取签到列表失败" + signResult.getMessage();
 
         List<SignItem> signList = signResult.getData();
 
-        // 3. 检查是否有未签到的
+        // 5. 检查是否有未签到且未过期的签到项
         List<SignItem> unsignedItems = signList.stream()
-                .filter(item -> item.getSignStatus() != null && item.getSignStatus() == 1)
-                .toList();
+            .filter(item ->
+                // 检查基础状态：未签到
+                item.getSignStatus() != null && item.getSignStatus() == 1 &&
+                // 检查结束时间：未过期（当前时间小于结束时间）
+                item.getEnd() != null && item.getEnd() > System.currentTimeMillis() &&
+                // 可选：检查开始时间：已经开始（当前时间大于等于开始时间）
+                (item.getStart() == null || item.getStart() <= System.currentTimeMillis())
+            )
+            .toList();
 
+        log.info("service层-有{}个签到未完成", unsignedItems.size());
         if (unsignedItems.isEmpty()) return "最近10条签到已全部完成，无需签到";
 
-        // 4. 执行签到
+        // 6. 执行签到
         List<String> signResults = new ArrayList<>();
         for (SignItem item : unsignedItems) {
             SignDTO signBuild = SignDTO.builder().inArea(1)
@@ -59,13 +74,13 @@ public class SignServiceImpl implements SignService {
                     .longitude(item.getLongitude())
                     .areaJSON(signInfoConfig.getAreaJson())
                     .build();
-            // 执行签到-默认鄠邑
+            // 执行签到-默认本校区
             String result = processSingleSign(username, item, signBuild);
             signResults.add(result);
 
             // 短暂延迟
             try {
-                Thread.sleep(1000);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -85,6 +100,8 @@ public class SignServiceImpl implements SignService {
      */
     @Override
     public String processSingleSign(String username, SignItem signItem, SignDTO signDTO) {
+        User user = userService.getOne(new QueryWrapper<User>().eq("username", username));
+        log.info("处理签到-username: {}, signItem: {}", user.getEmail(), signItem);
         try {
             // 执行签到
             Result<String> signResult = baseSignService.sign(
@@ -96,7 +113,7 @@ public class SignServiceImpl implements SignService {
             );
 
             // 检查签到结果
-            // 未登录-刷新JWS-二次签到
+            // 未登录-刷新JWS-再次签到
             if (Objects.equals(signResult.getMessage(), "未登录,请重新登录")) {
                 userService.refreshJws(username);
                 signResult = baseSignService.sign(
@@ -109,10 +126,14 @@ public class SignServiceImpl implements SignService {
             }
 
             // 返回结果
-            if (signResult.getCode() == 200)
+            if (signResult.getCode() == 200) {
+                emailService.sendSignResultNotice(user.getEmail(), user.getUsername(), true, signResult.getData());
                 return String.format("✅ %s - %s", signItem.getSignTitle(), signResult.getData());
-            else
+            }
+            else {
+                emailService.sendSignResultNotice(user.getEmail(), user.getUsername(), false, signResult.getMessage());
                 return String.format("❌ %s - %s", signItem.getSignTitle(), signResult.getMessage());
+            }
         } catch (Exception e) {
             log.error("处理签到 {} 失败: {}", signItem.getSignTitle(), e.getMessage());
             return String.format("⚠️ %s - 异常: %s", signItem.getSignTitle(), e.getMessage());

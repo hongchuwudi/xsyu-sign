@@ -15,5 +15,6 @@ spring:
     username: ${hc.datasource.username}
     password: ${hc.datasource.password}
 
-
+logging:
+  config: classpath:logback-spring.xml  # 指定使用我们的logback配置
 

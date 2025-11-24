@@ -49,6 +49,14 @@ hc:
     username: your-username
     password: your-password
     db: your-database-name
+  redis:
+     host: your-redis-host
+     port: your-redis-port
+     password: your-redis-pwd
+     db: 1
+  mail:
+     username: your-email-username  # 发件邮箱
+     password: your-email-pwd  # 授权码
 ```
 
 ### 3. 签到信息配置 `application-signInfo.yml`
@@ -82,37 +90,36 @@ hc:
 ### 2. 数据库初始化
 
 ```sql
-CREATE DATABASE xsyu CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
+-- 用户表 
+-- auto-generated definition
 create table user
 (
-    id                  bigint unsigned auto_increment comment '用户ID'
-        primary key,
-    name                varchar(255)                        null comment '姓名',
-    email               varchar(255)                        null comment '邮箱(用于发送通知)',
-    username            varchar(50)                         not null comment '用户名',
-    password            varbinary(255)                      not null comment '加密密码',
-    jws                 text                                null comment 'JWS',
-    sign_time_begin     time      default '18:30:00'        null comment '每天签到起始时间',
-    sign_time_end       time      default '20:00:00'        null comment '每天签到结束时间',
-    sign_random_delay   int                                 null comment '随机延迟时间(秒)',
-    sign_scheduled_time datetime                            null comment '计划签到时间',
-    created_at          timestamp default CURRENT_TIMESTAMP null comment '创建时间',
-    updated_at          timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '更新时间',
-    constraint username
-        unique (username)
+   id                  bigint unsigned auto_increment comment '用户ID'
+      primary key,
+   name                varchar(255)                         null comment '姓名',
+   email               varchar(255)                         null comment '邮箱(用于发送通知)',
+   username            varchar(50)                          not null comment '用户名',
+   password            varbinary(255)                       not null comment '加密密码',
+   jws                 text                                 null comment 'JWT令牌',
+   sign_random_delay   int                                  null comment '随机延迟时间(秒)',
+   sign_scheduled_time datetime                             null comment '计划签到时间',
+   created_at          timestamp  default CURRENT_TIMESTAMP null comment '创建时间',
+   updated_at          timestamp  default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '更新时间',
+   auto_sign           tinyint(1) default 0                 not null comment '是否参加自动签到',
+   constraint username
+      unique (username)
 )
-    comment '用户表';
+   comment '用户表';
 
 create index idx_username
-    on user (username);
+   on user (username);
 ```
 
 ### 3. 配置步骤
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/your-username/qq-robot-sign.git
+   git clone https://github.com/your-username/xsyu-sign.git
    cd qq-robot-sign
    ```
 
@@ -178,15 +185,26 @@ src/
 ├── main/
 │   ├── java/com/hongchu/qqrobotsign/
 │   │   ├── config/          # 配置类
-│   │   ├── controller/      # 控制器
-│   │   ├── service/         # 业务逻辑
+│   │   ├── content/         # 常量类
+│   │   ├── controller/      # 控制器层
+│   │   ├── exception/       # 全局异常
+│   │   ├── mapper/          # 持久化层
+│   │   ├── pojo/            # 数据类型层
+│   │   ├── result/          # 响应结构类型
+│   │   ├── intercepter/     # 拦截层
+│   │   ├── service/         # 业务逻辑层
 │   │   ├── webClient/       # HTTP客户端
-│   │   ├── utils/           # 工具类
-│   │   └── entity/          # 实体类
+│   │   ├── task/            # 定时任务
+│   │   └── utils/           # 工具类
 │   └── resources/
+│       ├── mapper                    # XML映射文件
+│       ├── static                    # 静态资源文件
+│       ├── logback-spring.xml        # 日志配置文件
 │       ├── application.yml           # 主配置
 │       ├── application-dev.yml       # 开发配置 (需手动创建)
+│       ├── application-prod.yml      # 生产配置 (需手动创建)
 │       └── application-signInfo.yml  # 签到配置 (需手动创建)
+
 └── test/                    # 测试代码
 ```
 

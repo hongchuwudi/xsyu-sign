@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>油签机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#667eea',
+                        secondary: '#764ba2',
+                        success: '#28a745',
+                        warning: '#ffc107',
+                        danger: '#dc3545',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'slide-left': 'slideLeft 0.5s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        slideLeft: {
+                            '0%': { transform: 'translateX(-20px)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .sidebar-transition {
+            transition: transform 0.3s ease;
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+<!-- 移动端顶部导航 -->
+<div class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+    <div class="flex items-center justify-between p-4">
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-robot text-primary text-xl"></i>
+            <h1 class="text-lg font-bold">油签机</h1>
+        </div>
+        <button id="mobileMenuToggle" class="p-2 rounded-md bg-gray-100">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+</div>
+
+<div class="flex min-h-screen pt-16 lg:pt-0">
+    <!-- 侧边栏 - 移动端为抽屉式 -->
+    <div id="sidebar" class="sidebar-transition fixed lg:static inset-y-0 left-0 z-40 w-64 lg:w-72 bg-white shadow-xl lg:shadow-none transform -translate-x-full lg:translate-x-0">
+        <div class="flex flex-col h-full">
+            <!-- 侧边栏头部 -->
+            <div class="gradient-bg text-white p-6">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-robot text-2xl"></i>
+                    <div>
+                        <h2 class="text-xl font-bold">油签机</h2>
+                        <p class="text-sm opacity-90">自动化签到解决方案</p>
+                    </div>
+                </div>
+                <div id="status" class="mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium bg-green-500 bg-opacity-80">
+                    ● 服务运行正常
+                </div>
+            </div>
+
+            <!-- 导航菜单 -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <!-- 首页 -->
+                <div class="mb-6">
+                    <div class="flex items-center space-x-2 text-gray-700 font-semibold mb-2 p-2 border-l-4 border-blue-500 bg-blue-50">
+                        <i class="fas fa-home w-5 text-center text-blue-500"></i>
+                        <span>首页</span>
+                    </div>
+                    <div class="space-y-1 ml-6">
+                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 bg-blue-50 text-blue-600 border-l-2 border-blue-500 font-medium" data-section="home">
+                            <i class="fas fa-info-circle w-5 text-center"></i>
+                            <span>系统介绍</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- 用户管理 -->
+                <div class="mb-6">
+                    <div class="flex items-center space-x-2 text-gray-700 font-semibold mb-2 p-2 border-l-4 border-primary bg-primary bg-opacity-10">
+                        <i class="fas fa-user w-5 text-center"></i>
+                        <span>用户管理</span>
+                    </div>
+                    <div class="space-y-1 ml-6">
+                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 bg-primary bg-opacity-15 text-primary border-l-2 border-primary font-medium" data-section="user-login">
+                            <i class="fas fa-sign-in-alt w-5 text-center"></i>
+                            <span>用户登录</span>
+                        </div>
+                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="user-setInfo">
+                            <i class="fas fa-user-edit w-5 text-center"></i>
+                            <span>更新用户信息</span>
+                        </div>
+                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="user-autoSign">
+                            <i class="fas fa-cog w-5 text-center"></i>
+                            <span>自动签到设置</span>
+                        </div>
+                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="user-logout">
+                            <i class="fas fa-sign-out-alt w-5 text-center"></i>
+                            <span>用户登出</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 签到管理 -->
+                <div class="mb-6">
+                    <div class="flex items-center space-x-2 text-gray-700 font-semibold mb-2 p-2 border-l-4 border-gray-300">
+                        <i class="fas fa-tasks w-5 text-center"></i>
+                        <span>手动签到管理</span>
+                    </div>
+                    <div class="space-y-1 ml-6">
+                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="sign-allSign">
+                            <i class="fas fa-list w-5 text-center"></i>
+                            <span>获取所有签到</span>
+                        </div>
+                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="sign-all">
+                            <i class="fas fa-bolt w-5 text-center"></i>
+                            <span>一键签到</span>
+                        </div>
+<!--                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="sign-oneSign">-->
+<!--                            <i class="fas fa-search w-5 text-center"></i>-->
+<!--                            <span>获取单个签到</span>-->
+<!--                        </div>-->
+                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="sign-one">
+                            <i class="fas fa-check-circle w-5 text-center"></i>
+                            <span>处理单个签到</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="flex-1 lg:ml-0">
+        <!-- PC端顶部 -->
+        <div class="hidden lg:flex items-center justify-between p-6 text-white">
+            <h1 class="text-3xl font-bold">🤖 油签机签到系统</h1>
+            <button id="sidebarToggle" class="p-3 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-all duration-300 hover:rotate-90">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="p-4 lg:p-6">
+            <!-- 首页介绍 -->
+            <div id="home" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-blue-500 pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-info-circle text-blue-500"></i>
+                    <span>系统介绍</span>
+                </h2>
+
+                <div class="space-y-6">
+                    <!-- 项目概述 -->
+                    <div class="bg-blue-50 rounded-xl p-5 border-l-4 border-blue-500">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
+                            <i class="fas fa-robot text-blue-500"></i>
+                            <span>项目概述</span>
+                        </h3>
+                        <p class="text-gray-600 leading-relaxed">
+                            <strong>油签机系统</strong> 是一个基于Spring Boot的自动化签到解决方案，专门为学生设计。
+                            系统需要用户提供自己的账号和密码，系统对密码高度加密,作者承诺不会泄露任何人的密码,仅仅用于签到。
+                            如果不知道登录账户和密码的话,可以访问西石大官网的统一登录页面。
+                            <br><strong>!!!本系统仅供学习测试,切勿非法使用!!!</strong>
+                            <a href="https://www.xsyu.edu.cn/"
+                               target="_blank"
+                               class="bg-white text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center space-x-2">
+                                <i class="fas fa-external-link-alt"></i>
+                                <span>访问XSYU</span>
+                            </a>
+                            <a href="https://ids.xsyu.edu.cn/authserver/login"
+                               target="_blank"
+                               class="bg-white text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center space-x-2">
+                                <i class="fas fa-external-link-alt"></i>
+                                <span>访问统一登录页面</span>
+                            </a>
+                            <a href="https://gwxg.xsyu.edu.cn/h5/mobile/sign/index/message"
+                               target="_blank"
+                               class="bg-white text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center space-x-2">
+                                <i class="fas fa-external-link-alt"></i>
+                                <span>访问油学通网页</span>
+                            </a>
+                            <a href="https://bgithub.xyz/hongchuwudi/xsyu-sign"
+                               target="_blank"
+                               class="bg-white text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center space-x-2">
+                                <i class="fas fa-external-link-alt"></i>
+                                <span>访问项目仓库</span>
+                            </a>
+
+                        </p>
+                    </div>
+
+                    <!-- 主要功能 -->
+                    <div class="bg-green-50 rounded-xl p-5 border-l-4 border-green-500">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
+                            <i class="fas fa-star text-green-500"></i>
+                            <span>主要功能</span>
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">用户认证</h4>
+                                    <p class="text-sm text-gray-600">安全的登录登出机制</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">一键签到</h4>
+                                    <p class="text-sm text-gray-600">批量处理所有签到任务</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">自动签到</h4>
+                                    <p class="text-sm text-gray-600">设置自动签到免去手动操作</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-check text-green-500 mt-1"></i>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">签到记录</h4>
+                                    <p class="text-sm text-gray-600">查看历史签到记录</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 使用指南 -->
+                    <div class="bg-purple-50 rounded-xl p-5 border-l-4 border-purple-500">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
+                            <i class="fas fa-book-open text-purple-500"></i>
+                            <span>使用指南</span>
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex items-start space-x-3">
+                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">1</span>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">用户登录</h4>
+                                    <p class="text-sm text-gray-600">用户名username是个人学号,登录采用XSYU官网统一账号密码</p>
+                                    <p class="text-sm text-gray-600"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">2</span>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">信息设置</h4>
+                                    <p class="text-sm text-gray-600">邮箱用于通知签到结果,name用于显示通知昵称</p>
+                                    <p class="text-sm text-gray-600"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">3</span>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">查看签到</h4>
+                                    <p class="text-sm text-gray-600">可以分页条件查看所有签到</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">4</span>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">执行签到</h4>
+                                    <p class="text-sm text-gray-600">使用一键签到或单独处理每个签到任务,传递参数通过调用签到API返回的信息获取</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">5</span>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">设置自动化</h4>
+                                    <p class="text-sm text-gray-600">开启自动签到功能，系统会在周日-周四每天晚上自动处理签到</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 使用流程 -->
+                    <div class="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-5 border-l-4 border-cyan-500">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center space-x-2">
+                            <i class="fas fa-project-diagram text-cyan-500"></i>
+                            <span>使用流程</span>
+                        </h3>
+
+                        <div class="relative">
+                            <!-- SVG流程图 -->
+                            <svg class="w-full h-80 md:h-64" viewBox="0 0 800 400">
+                                <!-- 主流程线 -->
+                                <path d="M 100,80 L 200,80 L 200,180 L 300,180 L 300,80 L 400,80 L 400,180"
+                                      stroke="#06b6d4" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+
+                                <!-- 分支线 - 自动模式 -->
+                                <path d="M 400,180 L 400,230 L 250,230 L 250,300"
+                                      stroke="#10b981" stroke-width="3" fill="none" marker-end="url(#arrowhead-green)"/>
+
+                                <!-- 分支线 - 手动模式 -->
+                                <path d="M 400,180 L 400,230 L 550,230 L 550,300"
+                                      stroke="#3b82f6" stroke-width="3" fill="none" marker-end="url(#arrowhead-blue)"/>
+
+                                <!-- 退出流程线 -->
+                                <path d="M 400,80 L 600,80 L 600,130 L 700,130"
+                                      stroke="#ef4444" stroke-width="3" fill="none" marker-end="url(#arrowhead-red)"/>
+
+                                <!-- 步骤1: 用户登录 -->
+                                <circle cx="100" cy="80" r="35" fill="#06b6d4" stroke="#0891b2" stroke-width="2"/>
+                                <text x="100" y="80" text-anchor="middle" fill="white" font-weight="bold" font-size="18" dy="5">1</text>
+                                <text x="100" y="125" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">用户登录</text>
+
+                                <!-- 步骤2: 更新信息 -->
+                                <circle cx="300" cy="80" r="35" fill="#06b6d4" stroke="#0891b2" stroke-width="2"/>
+                                <text x="300" y="80" text-anchor="middle" fill="white" font-weight="bold" font-size="18" dy="5">2</text>
+                                <text x="300" y="125" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">更新信息</text>
+
+                                <!-- 步骤3: 选择模式 -->
+                                <circle cx="400" cy="180" r="35" fill="#f59e0b" stroke="#d97706" stroke-width="2"/>
+                                <text x="400" y="180" text-anchor="middle" fill="white" font-weight="bold" font-size="18" dy="5">3</text>
+                                <text x="400" y="225" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">选择模式</text>
+
+                                <!-- 自动模式 -->
+                                <circle cx="250" cy="300" r="35" fill="#10b981" stroke="#059669" stroke-width="2"/>
+                                <text x="250" y="300" text-anchor="middle" fill="white" font-weight="bold" font-size="16" dy="5">A</text>
+                                <text x="250" y="345" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">自动模式</text>
+                                <text x="250" y="365" text-anchor="middle" fill="#64748b" font-size="24">设置自动签到</text>
+
+                                <!-- 手动模式 -->
+                                <circle cx="550" cy="300" r="35" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/>
+                                <text x="550" y="300" text-anchor="middle" fill="white" font-weight="bold" font-size="16" dy="5">M</text>
+                                <text x="550" y="345" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">手动模式</text>
+                                <text x="550" y="365" text-anchor="middle" fill="#64748b" font-size="24">手动操作签到</text>
+
+                                <!-- 退出流程 -->
+                                <circle cx="700" cy="130" r="35" fill="#ef4444" stroke="#dc2626" stroke-width="2"/>
+                                <text x="700" y="130" text-anchor="middle" fill="white" font-weight="bold" font-size="16" dy="5">X</text>
+                                <text x="700" y="175" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">用户登出</text>
+                                <text x="700" y="195" text-anchor="middle" fill="#64748b" font-size="24">注销信息</text>
+
+                                <!-- 箭头定义 -->
+                                <defs>
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#06b6d4"/>
+                                    </marker>
+                                    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+                                    </marker>
+                                    <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+                                    </marker>
+                                    <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+                                    </marker>
+                                </defs>
+                            </svg>
+
+                            <!-- 流程说明 -->
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-8">
+                                <div class="text-center">
+                                    <div class="inline-flex items-center space-x-2 bg-cyan-100 px-3 py-2 rounded-lg">
+                                        <div class="w-3 h-3 bg-cyan-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-cyan-800">主流程</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mt-1">必须步骤</p>
+                                </div>
+                                <div class="text-center">
+                                    <div class="inline-flex items-center space-x-2 bg-green-100 px-3 py-2 rounded-lg">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-green-800">自动模式</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mt-1">设置后自动处理</p>
+                                </div>
+                                <div class="text-center">
+                                    <div class="inline-flex items-center space-x-2 bg-blue-100 px-3 py-2 rounded-lg">
+                                        <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-blue-800">手动模式</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mt-1">手动操作签到</p>
+                                </div>
+                                <div class="text-center">
+                                    <div class="inline-flex items-center space-x-2 bg-red-100 px-3 py-2 rounded-lg">
+                                        <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-red-800">退出流程</span>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mt-1">停止使用</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 技术特性 -->
+                    <div class="bg-orange-50 rounded-xl p-5 border-l-4 border-orange-500">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
+                            <i class="fas fa-cogs text-orange-500"></i>
+                            <span>技术特性</span>
+                        </h3>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">Spring Boot</span>
+                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">AES强加密</span>
+                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">RESTful API</span>
+                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">响应式设计</span>
+                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">限流保护</span>
+                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">MyBatis Plus</span>
+                        </div>
+                    </div>
+
+                    <!-- 快速开始 -->
+<!--                    <div class="bg-indigo-50 rounded-xl p-5 border-l-4 border-indigo-500">-->
+<!--                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">-->
+<!--                            <i class="fas fa-rocket text-indigo-500"></i>-->
+<!--                            <span>快速开始</span>-->
+<!--                        </h3>-->
+<!--                        <div class="bg-gray-800 rounded-lg p-4">-->
+<!--                            <code class="text-green-400 font-mono text-sm block">-->
+<!--                                # 1. 启动后端服务<br>-->
+<!--                                ./mvnw spring-boot:run<br><br>-->
+<!--                                # 2. 访问系统<br>-->
+<!--                                http://localhost:11451<br><br>-->
+<!--                                # 3. 开始使用左侧菜单测试接口-->
+<!--                            </code>-->
+<!--                        </div>-->
+<!--                    </div>-->
+                </div>
+            </div>
+
+            <!-- 用户登录 -->
+            <div id="user-login" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-sign-in-alt text-primary"></i>
+                    <span>用户登录</span>
+                </h2>
+
+                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
+                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/user/login</code>
+                    </div>
+                    <p class="description text-gray-600 mb-4">用户登录并注册签到信息</p>
+
+                    <div class="parameters mb-4">
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">username</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">用户名</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">psd</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">密码</div>
+                        </div>
+                    </div>
+
+                    <div class="test-area bg-gray-100 rounded-lg p-4">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-login">
+                        <input type="password" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="密码" id="psd-login">
+                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('login')">
+                            <i class="fas fa-play"></i>
+                            <span>发送请求</span>
+                        </button>
+                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-login"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 自动签到设置 -->
+            <div id="user-autoSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-cog text-primary"></i>
+                    <span>自动签到设置</span>
+                </h2>
+
+                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
+                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/user/auto-sign/{username}/{isAuto}</code>
+                    </div>
+                    <p class="description text-gray-600 mb-4">设置是否自动签到(每天晚上6:30-8:00随机时刻自动签到)</p>
+
+                    <div class="parameters mb-4">
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">username</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">用户名</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">isAuto</span>
+                                <span class="param-type text-gray-500 text-sm">boolean</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">是否自动签到 (true/false)</div>
+                        </div>
+                    </div>
+
+                    <div class="test-area bg-gray-100 rounded-lg p-4">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-autoSign">
+                        <select class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" id="isAuto-autoSign">
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('autoSign')">
+                            <i class="fas fa-play"></i>
+                            <span>发送请求</span>
+                        </button>
+                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-autoSign"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户登出 -->
+            <div id="user-logout" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-sign-out-alt text-primary"></i>
+                    <span>用户登出</span>
+                </h2>
+
+                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
+                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/user/logout/{username}</code>
+                    </div>
+                    <p class="description text-gray-600 mb-4">用户登出-清理数据库的所有登录信息</p>
+
+                    <div class="parameters mb-4">
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">username</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">用户名</div>
+                        </div>
+                    </div>
+
+                    <div class="test-area bg-gray-100 rounded-lg p-4">
+                        <input type="text" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-logout">
+                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('logout')">
+                            <i class="fas fa-play"></i>
+                            <span>发送请求</span>
+                        </button>
+                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-logout"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 更新用户信息 -->
+            <div id="user-setInfo" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-user-edit text-primary"></i>
+                    <span>更新用户信息</span>
+                </h2>
+
+                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="method post bg-primary text-white px-3 py-1 rounded-full text-sm font-bold">POST</span>
+                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/user/info/{username}</code>
+                    </div>
+                    <p class="description text-gray-600 mb-4">更新用户基本信息</p>
+
+                    <div class="parameters mb-4">
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">username</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">用户名</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-warning transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">name</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">姓名</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-warning transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">email</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">邮箱</div>
+                        </div>
+                    </div>
+
+                    <div class="test-area bg-gray-100 rounded-lg p-4">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-setInfo">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="姓名 (可选)" id="name-setInfo">
+                        <input type="email" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="邮箱 (可选)" id="email-setInfo">
+                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('setInfo')">
+                            <i class="fas fa-play"></i>
+                            <span>测试接口</span>
+                        </button>
+                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-setInfo"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 获取所有签到 -->
+            <div id="sign-allSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-list text-primary"></i>
+                    <span>获取所有签到</span>
+                </h2>
+
+                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
+                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/sign/allSign/{username}</code>
+                    </div>
+                    <p class="description text-gray-600 mb-4">获取用户的所有签到任务列表</p>
+
+                    <div class="parameters mb-4">
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">username</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">用户名</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">page</span>
+                                <span class="param-type text-gray-500 text-sm">integer</span>
+                                <span class="text-gray-500 text-sm">默认: 1</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">页码</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">size</span>
+                                <span class="param-type text-gray-500 text-sm">integer</span>
+                                <span class="text-gray-500 text-sm">默认: 10</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">每页数量</div>
+                        </div>
+                    </div>
+
+                    <div class="test-area bg-gray-100 rounded-lg p-4">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-allSign">
+                        <input type="number" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="页码 (默认1)" id="page-allSign">
+                        <input type="number" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="每页数量 (默认10)" id="size-allSign">
+                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('allSign')">
+                            <i class="fas fa-play"></i>
+                            <span>发送请求</span>
+                        </button>
+                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-allSign"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 一键签到 -->
+            <div id="sign-all" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-bolt text-primary"></i>
+                    <span>一键签到</span>
+                </h2>
+
+                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
+                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/sign/all/{username}</code>
+                    </div>
+                    <p class="description text-gray-600 mb-4">一键执行所有签到任务</p>
+
+                    <div class="parameters mb-4">
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">username</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">用户名</div>
+                        </div>
+                    </div>
+
+                    <div class="test-area bg-gray-100 rounded-lg p-4">
+                        <input type="text" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-all">
+                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('all')">
+                            <i class="fas fa-play"></i>
+                            <span>发送请求</span>
+                        </button>
+                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-all"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 获取单个签到 -->
+            <div id="sign-oneSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-search text-primary"></i>
+                    <span>获取单个签到</span>
+                </h2>
+
+                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
+                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base break-all lg:break-keep">
+                            /sign/oneSign/{username}/{signId}/{schoolId}
+                        </code>
+                    </div>
+                    <p class="description text-gray-600 mb-4">获取指定签到的详细信息</p>
+
+                    <div class="parameters mb-4">
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">username</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">用户名</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">signId</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">签到ID</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">schoolId</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">学校ID</div>
+                        </div>
+                    </div>
+
+                    <div class="test-area bg-gray-100 rounded-lg p-4">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-oneSign">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="签到ID" id="signId-oneSign">
+                        <input type="text" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="学校ID" id="schoolId-oneSign">
+                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('oneSign')">
+                            <i class="fas fa-play"></i>
+                            <span>发送请求</span>
+                        </button>
+                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-oneSign"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 处理单个签到 -->
+            <div id="sign-one" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
+                    <i class="fas fa-check-circle text-primary"></i>
+                    <span>处理单个签到</span>
+                </h2>
+
+                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
+                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/sign/one</code>
+                    </div>
+                    <p class="description text-gray-600 mb-4">处理单个签到任务</p>
+
+                    <div class="parameters mb-4">
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">username</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">用户名</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">id</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">ID,通过获取查看某个签到信息来获取这个字段的值</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">signId</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">签到ID,通过获取单个签到接口获取这个字段的值</div>
+                        </div>
+                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="param-name font-bold text-gray-800">schoolId</span>
+                                <span class="param-type text-gray-500 text-sm">string</span>
+                                <span class="param-required text-danger text-xs font-medium">必需</span>
+                            </div>
+                            <div class="text-gray-600 text-sm mt-1">学校ID,默认为17不用动</div>
+                        </div>
+                    </div>
+
+                    <div class="test-area bg-gray-100 rounded-lg p-4">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-one">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="ID" id="id-one">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="签到ID" id="signId-one">
+                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="学校ID" id="schoolId-one" value="17">
+                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('one')">
+                            <i class="fas fa-play"></i>
+                            <span>发送请求</span>
+                        </button>
+                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-one"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移动端遮罩层 -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
+</div>
+
+<script>
+    const BASE_URL = 'http://localhost:11451';
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        const navItems = document.querySelectorAll('.nav-item');
+        const apiSections = document.querySelectorAll('.api-section');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+
+        // 默认显示第一个接口
+        showSection('home');
+
+        // 导航项点击事件
+        navItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // 移除所有活动状态
+                navItems.forEach(nav => {
+                    nav.classList.remove('bg-primary', 'bg-opacity-15', 'text-primary', 'border-l-2', 'border-primary', 'font-medium');
+                    nav.classList.add('text-gray-600', 'hover:bg-gray-100');
+                });
+
+                // 添加当前活动状态
+                this.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                this.classList.add('bg-primary', 'bg-opacity-15', 'text-primary', 'border-l-2', 'border-primary', 'font-medium');
+
+                // 显示对应部分
+                const sectionId = this.getAttribute('data-section');
+                showSection(sectionId);
+
+                // 在移动设备上点击后关闭侧边栏
+                if (window.innerWidth < 1024) {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                }
+            });
+        });
+
+        // PC端切换侧边栏
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('lg:w-20');
+                sidebar.classList.toggle('lg:w-72');
+
+                // 隐藏/显示侧边栏文本
+                const sidebarTexts = document.querySelectorAll('.sidebar-text');
+                sidebarTexts.forEach(text => {
+                    text.classList.toggle('lg:hidden');
+                });
+            });
+        }
+
+        // 移动端切换菜单
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            });
+        }
+
+        // 点击遮罩层关闭侧边栏
+        if (overlay) {
+            overlay.addEventListener('click', function() {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            });
+        }
+
+        // 检查服务状态
+        checkServiceStatus();
+    });
+
+    // 显示指定部分
+    function showSection(sectionId) {
+        const apiSections = document.querySelectorAll('.api-section');
+        apiSections.forEach(section => {
+            if (section.id === sectionId) {
+                section.classList.remove('hidden');
+                // 滚动到该部分
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                section.classList.add('hidden');
+            }
+        });
+    }
+
+    // 测试API
+    async function testApi(apiType) {
+        const responseEl = document.getElementById(`response-${apiType}`);
+        const testBtn = document.querySelector(`#response-${apiType}`).previousElementSibling;
+        const originalText = testBtn.innerHTML;
+
+        responseEl.classList.remove('hidden');
+        responseEl.textContent = '请求中...';
+        testBtn.innerHTML = '<div class="loader w-5 h-5 mr-2"></div><span>请求中...</span>';
+        testBtn.disabled = true;
+
+        try {
+            let url = '';
+            let response;
+            switch(apiType) {
+                // 用户
+                case 'login':
+                    const username4 = document.getElementById('username-login').value;
+                    const psd = document.getElementById('psd-login').value;
+                    const encryptPsd = simpleEncrypt(psd);
+                    url = `${BASE_URL}/user/login?username=${username4}&psd=${encodeURIComponent(encryptPsd)}`;
+                    response = await fetch(url, {method: 'POST'});
+                    break;
+                case 'autoSign':
+                    const username5 = document.getElementById('username-autoSign').value;
+                    const isAuto = document.getElementById('isAuto-autoSign').value;
+                    url = `${BASE_URL}/user/auto-sign/${username5}/${isAuto}`;
+                    response = await fetch(url, {method: 'PUT'});
+                    break;
+                case 'logout':
+                    const username6 = document.getElementById('username-logout').value;
+                    url = `${BASE_URL}/user/logout/${username6}`;
+                    response = await fetch(url, {method: 'POST'});
+                    break;
+                case 'setInfo':
+                    const username8 = document.getElementById('username-setInfo').value;
+                    url = `${BASE_URL}/user/info/${username8}`;
+                    response = await fetch(url, {method: 'PUT'});
+                    break;
+                // 签到
+                case 'allSign':
+                    const username1 = document.getElementById('username-allSign').value;
+                    const page = document.getElementById('page-allSign').value || '1';
+                    const size = document.getElementById('size-allSign').value || '10';
+                    url = `${BASE_URL}/sign/allSign/${username1}?page=${page}&size=${size}`;
+                    response = await fetch(url);
+                    break;
+                case 'all':
+                    const username2 = document.getElementById('username-all').value;
+                    url = `${BASE_URL}/sign/all/${username2}`;
+                    response = await fetch(url, {method: 'POST'});
+                    break;
+                case 'oneSign':
+                    const username3 = document.getElementById('username-oneSign').value;
+                    const signId = document.getElementById('signId-oneSign').value;
+                    const schoolId = document.getElementById('schoolId-oneSign').value;
+                    url = `${BASE_URL}/sign/oneSign/${username3}/${signId}/${schoolId}`;
+                    response = await fetch(url);
+                    break;
+                case 'one':
+                    const username7 = document.getElementById('username-one').value;
+                    const id = document.getElementById('id-one').value;
+                    const signIdOne = document.getElementById('signId-one').value;
+                    const schoolIdOne = document.getElementById('schoolId-one').value;
+                    const inArea = document.getElementById('inArea-one').value || '1';
+                    const areaJSON = document.getElementById('areaJSON-one').value;
+                    const latitude = document.getElementById('latitude-one').value;
+                    const longitude = document.getElementById('longitude-one').value;
+                    let params = [];
+                    if (username7) params.push(`username=${username7}`);
+                    if (id) params.push(`id=${id}`);
+                    if (signIdOne) params.push(`signId=${signIdOne}`);
+                    if (schoolIdOne) params.push(`schoolId=${schoolIdOne}`);
+                    if (inArea) params.push(`inArea=${inArea}`);
+                    if (areaJSON) params.push(`areaJSON=${encodeURIComponent(areaJSON)}`);
+                    if (latitude) params.push(`latitude=${latitude}`);
+                    if (longitude) params.push(`longitude=${longitude}`);
+                    url = `${BASE_URL}/sign/one?${params.join('&')}`;
+                    response = await fetch(url, {method: 'POST'});
+                    break;
+            }
+
+
+            const data = await response.text();
+
+            // 设置响应元素样式
+            responseEl.style.whiteSpace = 'pre-wrap';
+            responseEl.style.wordBreak = 'break-all';
+            responseEl.style.overflowX = 'auto';
+            responseEl.style.maxWidth = '100%';
+            responseEl.style.padding = '10px';
+            responseEl.style.backgroundColor = '#f8f9fa';
+            responseEl.style.borderRadius = '5px';
+            responseEl.style.border = '1px solid #e9ecef';
+
+            try {
+                const jsonData = JSON.parse(data);
+                const formattedJson = JSON.stringify(jsonData, null, 2);
+                responseEl.textContent = `状态码: ${response.status}\n\n响应数据:\n${formattedJson}`;
+            } catch (e) {
+                responseEl.textContent = `状态码: ${response.status}\n\n响应数据:\n${data}`;
+            }
+
+// 设置整体颜色
+            responseEl.style.color = response.ok ? '#2c5f2d' : '#cc0000';
+
+        } catch (error) {
+            responseEl.textContent = `请求失败: ${error.message}`;
+            responseEl.style.color = '#ff6b6b';
+        } finally {
+            testBtn.innerHTML = '<i class="fas fa-play"></i><span>发送请求</span>';
+            testBtn.disabled = false;
+        }
+    }
+
+    // 检查服务状态
+    async function checkServiceStatus() {
+        const statusEl = document.getElementById('status');
+
+        try {
+            const response = await fetch(BASE_URL);
+            if (!response.ok) {
+                throw new Error('服务异常');
+            }
+            statusEl.className = 'mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium bg-green-500 bg-opacity-80';
+            statusEl.textContent = '● 服务运行正常';
+        } catch (error) {
+            statusEl.className = 'mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium bg-red-500 bg-opacity-80';
+            statusEl.textContent = '● 服务连接失败';
+        }
+    }
+
+    // 简单AES加密
+    function simpleEncrypt(text, key = "1234567890123456") {
+        const CryptoJS = window.CryptoJS;
+        const keyBytes = CryptoJS.enc.Utf8.parse(key);
+        const encrypted = CryptoJS.AES.encrypt(text, keyBytes, {
+            mode: CryptoJS.mode.ECB,
+            padding: CryptoJS.pad.Pkcs7
+        });
+        return encrypted.toString();
+    }
+</script>
+</body>
+</html>

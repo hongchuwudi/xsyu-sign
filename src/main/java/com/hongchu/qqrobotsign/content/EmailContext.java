@@ -23,7 +23,7 @@ public class EmailContext {
     👤 用户：%s
     ⏰ 执行时间：%s
     📊 执行结果：%s
-    
+   
     %s
     """;
     public static final String SIGN_SUCCESS_TITLE = "🎉 签到成功！";

@@ -2,15 +2,15 @@ package com.hongchu.qqrobotsign.controller;
 
 import com.hongchu.qqrobotsign.pojo.DTO.SignDTO;
 import com.hongchu.qqrobotsign.pojo.entity.SignItem;
+import com.hongchu.qqrobotsign.result.Result;
 import com.hongchu.qqrobotsign.service.SignService;
 import com.hongchu.qqrobotsign.webClient.BaseSignService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * <p>
@@ -35,12 +35,12 @@ public class SignController {
      * @param size 每页数量
      * @return 签到结果
      */
-    @RequestMapping("/allSign")
-    public String getAllSign(@RequestParam("username") String username,
-                             @RequestParam(value = "page",defaultValue = "1") Integer page,
-                             @RequestParam(value = "size",defaultValue = "10") Integer size){
+    @RequestMapping("/allSign/{username}")
+    public Result<List<SignItem>> getAllSign(@PathVariable("username") String username,
+                                             @RequestParam(value = "page",defaultValue = "1") Integer page,
+                                             @RequestParam(value = "size",defaultValue = "10") Integer size){
         log.info("controller层-获取所有签到-username: {}", username);
-        return String.valueOf(baseSignService.getAllSign(username, page, size));
+        return baseSignService.getAllSign(username, page, size);
     }
 
     /**
@@ -50,13 +50,13 @@ public class SignController {
      * @param schoolId 学校id
      * @return 签到结果
      */
-    @RequestMapping("/oneSign/{signId}/{schoolId}")
-    public String getOneSign(@RequestParam("username") String username,
+    @RequestMapping("/oneSign/{username}{signId}/{schoolId}")
+    public Result<SignItem> getOneSign(@PathVariable("username") String username,
                              @PathVariable("signId") String signId,
                              @PathVariable("schoolId") String schoolId){
         log.info("controller层-获取单个签到-username: {}, signId: {}, schoolId: {}",
                 username, signId, schoolId);
-        return String.valueOf(baseSignService.getOneSign(username, signId, schoolId));
+        return baseSignService.getOneSign(username, signId, schoolId);
     }
 
     /**
@@ -64,8 +64,8 @@ public class SignController {
      * @param username 用户名
      * @return 签到结果
      */
-    @RequestMapping("/all")
-    public String sign(@RequestParam("username") String username) {
+    @PostMapping("/all/{username}")
+    public String sign(@PathVariable("username") String username) {
         log.info("controller层-签到-username: {}", username);
         return signService.signAll(username);
     }
@@ -75,7 +75,7 @@ public class SignController {
      * @param username 用户名
      * @return 签到结果
      */
-    @RequestMapping("/one")
+    @PostMapping("/one")
     public String signOne(@RequestParam("username") String username,
                           @RequestParam(name = "id")String id,
                           @RequestParam(name = "signId") String signId,
@@ -90,5 +90,4 @@ public class SignController {
                         .build();
         return signService.processSingleSign(username, signItem, signDTO);
     }
-
 }

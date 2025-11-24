@@ -4,10 +4,10 @@ server:
 spring:
   application:
       name: qq-robot-service
-  #开发环境
+  # 配置文件
   profiles:
-    active: dev
-    include: signInfo
+    active: dev      # 配置环境
+    include: signInfo # 包含文件
   #数据库
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -45,6 +45,9 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
+
+# 日志
 logging:
   config: classpath:logback-spring.xml  # 指定使用我们的logback配置
+
 

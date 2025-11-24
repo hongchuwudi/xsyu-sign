@@ -1,5 +1,6 @@
 package com.hongchu.qqrobotsign.service;
 
+import com.hongchu.qqrobotsign.pojo.DTO.UserDTO;
 import com.hongchu.qqrobotsign.pojo.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -20,5 +21,11 @@ public interface IUserService extends IService<User> {
     String removeLoginInfo(String username);
 
     // 续签JWS
-    String refreshJws(String username);
+    void refreshJws(String username);
+
+    // 修改信息
+    void setInfo(String username, UserDTO userDTO);
+
+    // 设置自动登录
+    void setAutoSign(String username, Boolean isAuto);
 }

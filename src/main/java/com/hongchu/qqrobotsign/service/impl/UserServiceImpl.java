@@ -1,24 +1,20 @@
 package com.hongchu.qqrobotsign.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.hongchu.qqrobotsign.exception.BusinessException;
-import com.hongchu.qqrobotsign.pojo.DTO.SignDTO;
-import com.hongchu.qqrobotsign.pojo.entity.SignItem;
+import com.hongchu.qqrobotsign.pojo.DTO.UserDTO;
 import com.hongchu.qqrobotsign.pojo.entity.User;
 import com.hongchu.qqrobotsign.mapper.UserMapper;
-import com.hongchu.qqrobotsign.result.Result;
 import com.hongchu.qqrobotsign.service.IUserService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hongchu.qqrobotsign.utils.CryptoUtils;
 import com.hongchu.qqrobotsign.utils.XSYULoginUtil;
-import com.hongchu.qqrobotsign.webClient.BaseSignService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import com.hongchu.qqrobotsign.utils.SimpleCryptoUtils;
 /**
  * <p>
  * 用户表 服务实现类
@@ -33,6 +29,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     // 登录
     @Override
     public String register(String username, String password) {
+        // 解密
+        log.info("用户: {} 登录密码: {}", username, password);
+        password = SimpleCryptoUtils.decrypt(password);
+        log.info("用户: {} 登录密码: {},密码长度: {}", username, password,password.length());
         // 1.检查是否有该用户
         User user = this.getOne(new QueryWrapper<User>().eq("username", username));
 
@@ -80,8 +80,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         }
     }
 
+    // 刷新JWS
     @Override
-    public String refreshJws(String username) {
+    public void refreshJws(String username) {
         // 1.检查是否有该用户
         User user = this.getOne(new QueryWrapper<User>().eq("username", username));
 
@@ -95,6 +96,44 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         update().set("jws", jws).eq("username", username);
 
         log.info("用户: {} 续签成功---JWS:{}", username, jws);
-        return "成功续签JWS";
+    }
+
+    // 修改信息
+    @Override
+    public void setInfo(String username, UserDTO userDTO) {
+        // 参数校验
+        if (StringUtils.isBlank(username)) throw new BusinessException("用户名不能为空");
+
+        // 构建更新条件
+        LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(User::getUsername, username);
+
+        // 构建更新实体
+        User updateUser = new User();
+
+        // 只更新非空字段
+        if (StringUtils.isNotBlank(userDTO.getName()))
+            updateUser.setName(userDTO.getName());
+        if (StringUtils.isNotBlank(userDTO.getEmail())) {
+            // 邮箱格式校验
+            String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+            if (!userDTO.getEmail().matches(emailRegex))
+                throw new BusinessException("邮箱格式不正确");
+            updateUser.setEmail(userDTO.getEmail());
+        }
+
+        // 执行更新
+        boolean updated = update(updateUser, updateWrapper);
+        if (!updated) throw new BusinessException("用户信息更新失败，用户不存在或数据未变化");
+    }
+
+    @Override
+    public void setAutoSign(String username, Boolean isAuto) {
+        // 检查用户是否存在
+        User user = this.getOne(new QueryWrapper<User>().eq("username", username));
+        if (user == null) throw new BusinessException("用户不存在");
+
+        // 执行更新
+        lambdaUpdate().eq(User::getUsername, username).set(User::getAutoSign, isAuto).update();
     }
 }

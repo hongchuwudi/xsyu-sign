@@ -6,13 +6,13 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
-@MapperScan("com.hongchu.qqrobotsign.**.mapper")
-@EnableScheduling
 @Slf4j
+@EnableScheduling
+@MapperScan("com.hongchu.qqrobotsign.**.mapper")
+@SpringBootApplication(scanBasePackages = "com.hongchu.qqrobotsign")
 public class QqRobotSignApplication {
     public static void main(String[] args) {
         SpringApplication.run(QqRobotSignApplication.class, args);
-        log.info("==============春天的鞋启动成功==============");
+        log.info("==============! SpringBoot 启动成功 !==============");
     }
 }

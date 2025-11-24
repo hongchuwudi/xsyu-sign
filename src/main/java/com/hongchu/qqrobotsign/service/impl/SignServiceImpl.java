@@ -46,7 +46,7 @@ public class SignServiceImpl implements SignService {
         }
 
         // 4.如果刷新JWS后再次获取失败,直接返回错误
-        if (!Objects.equals(signResult.getMessage(), ""))
+        if (!Objects.equals(signResult.getCode(), 200))
             return "获取签到列表失败" + signResult.getMessage();
 
         List<SignItem> signList = signResult.getData();
@@ -69,13 +69,13 @@ public class SignServiceImpl implements SignService {
         // 6. 执行签到
         List<String> signResults = new ArrayList<>();
         for (SignItem item : unsignedItems) {
-            SignDTO signBuild = SignDTO.builder().inArea(1)
-                    .latitude(item.getLatitude())
-                    .longitude(item.getLongitude())
-                    .areaJSON(signInfoConfig.getAreaJson())
-                    .build();
+//            SignDTO signBuild = SignDTO.builder().inArea(1)
+//                    .latitude(item.getLatitude())
+//                    .longitude(item.getLongitude())
+//                    .areaJSON(signInfoConfig.getAreaJson())
+//                    .build();
             // 执行签到-默认本校区
-            String result = processSingleSign(username, item, signBuild);
+            String result = processSingleSign(username, item, null);
             signResults.add(result);
 
             // 短暂延迟

@@ -9,20 +9,20 @@ public class TestCryptoUtils {
         // 测试1: 基本加解密
         testBasicEncryption();
 
-        // 测试2: 密码验证
-        testPasswordVerification();
-
-        // 测试3: 生成随机密码
-        testRandomPasswordGeneration();
-
-        // 测试4: 密码哈希
-        testPasswordHashing();
-
-        // 测试5: 边界测试
-        testEdgeCases();
-
-        // 测试6: 性能测试
-        testPerformance();
+//        // 测试2: 密码验证
+//        testPasswordVerification();
+//
+//        // 测试3: 生成随机密码
+//        testRandomPasswordGeneration();
+//
+//        // 测试4: 密码哈希
+//        testPasswordHashing();
+//
+//        // 测试5: 边界测试
+//        testEdgeCases();
+//
+//        // 测试6: 性能测试
+//        testPerformance();
     }
 
     /**

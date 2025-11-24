@@ -2,11 +2,11 @@ package com.hongchu.qqrobotsign.service;
 
 public interface EmailService {
     // 发送简单邮件
-    public void sendSimpleEmail(String to, String subject, String content);
+    void sendSimpleEmail(String to, String subject, String content);
 
     // 通知用户签到时间安排
-    public void sendScheduleNotice(String to, String username, String scheduledTime);
+    void sendScheduleNotice(String to, String username, String scheduledTime);
 
     // 签到结果通知
-    public void sendSignResultNotice(String to, String username, boolean success, String resultMessage);
+    void sendSignResultNotice(String to, String username, boolean success, String resultMessage);
 }

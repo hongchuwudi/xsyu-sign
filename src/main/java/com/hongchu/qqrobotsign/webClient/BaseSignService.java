@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hongchu.qqrobotsign.config.SignInfoConfig;
 import com.hongchu.qqrobotsign.config.UrlConfig;
+import com.hongchu.qqrobotsign.exception.BusinessException;
 import com.hongchu.qqrobotsign.pojo.DTO.SignDTO;
 import com.hongchu.qqrobotsign.pojo.entity.SignItem;
 import com.hongchu.qqrobotsign.pojo.entity.User;
@@ -61,7 +62,8 @@ public class BaseSignService {
         try{
             signResponse = objectMapper.readValue(response, SignListResponse.class);
             if(signResponse.getMessage() != null && !signResponse.getMessage().isEmpty())
-                return Result.fail(signResponse.getMessage());
+//                return Result.fail(signResponse.getMessage());
+                throw new BusinessException("webClient层异常:" + signResponse.getMessage());
         }catch (JsonProcessingException e){
             return Result.fail("解析响应失败");
         }
@@ -101,8 +103,8 @@ public class BaseSignService {
         try {
             detailResponse = objectMapper.readValue(response, SignDetailResponse.class);
             if(detailResponse.getMessage() != null && !detailResponse.getMessage().isEmpty())
-                return Result.fail(detailResponse.getMessage());
-
+//                return Result.fail(detailResponse.getMessage());
+                throw new BusinessException("webClient层异常:" + detailResponse.getMessage());
         }catch (JsonProcessingException e){
             return Result.fail("解析响应失败");
         }
@@ -155,7 +157,7 @@ public class BaseSignService {
         try {
             resultResponse = objectMapper.readValue(response, SignResultResponse.class);
             if(resultResponse.getMessage() != null && !resultResponse.getMessage().isEmpty())
-                return Result.fail(resultResponse.getMessage());
+                throw new BusinessException("webClient层异常:" + resultResponse.getMessage());
         } catch (JsonProcessingException e) {
             return Result.fail("解析响应失败");
         }
@@ -171,13 +173,13 @@ public class BaseSignService {
         User user = userService.query().eq("username", username).one();
         if (user == null) {
             log.error("用户不存在: {}", username);
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
 
         String jws = user.getJws();
         if (jws == null || jws.trim().isEmpty()) {
             log.error("用户JWSESSION为空: {}", username);
-            throw new RuntimeException("用户存在，但JWSESSION为空");
+            throw new BusinessException("用户存在，但JWSESSION为空");
         }
         return jws;
     }

@@ -186,7 +186,7 @@
         <!-- 内容区域 -->
         <div class="p-4 lg:p-6">
             <!-- 首页介绍 -->
-            <div id="home" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up">
+            <div id="home" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-blue-500 pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-info-circle text-blue-500"></i>
                     <span>系统介绍</span>
@@ -326,102 +326,194 @@
 
                         <div class="relative">
                             <!-- SVG流程图 -->
-                            <svg class="w-full h-80 md:h-64" viewBox="0 0 800 400">
+                            <svg class="w-full h-96 md:h-80" viewBox="0 0 1000 600">
                                 <!-- 主流程线 -->
-                                <path d="M 100,80 L 200,80 L 200,180 L 300,180 L 300,80 L 400,80 L 400,180"
-                                      stroke="#06b6d4" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                                <path d="M 100,100 L 200,100 L 200,200 L 300,200 L 300,100 L 400,100 L 400,200"
+                                      stroke="#06b6d4" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
 
                                 <!-- 分支线 - 自动模式 -->
-                                <path d="M 400,180 L 400,230 L 250,230 L 250,300"
-                                      stroke="#10b981" stroke-width="3" fill="none" marker-end="url(#arrowhead-green)"/>
+                                <path d="M 400,200 L 400,250 L 250,250 L 250,350"
+                                      stroke="#10b981" stroke-width="4" fill="none" marker-end="url(#arrowhead-green)"/>
 
                                 <!-- 分支线 - 手动模式 -->
-                                <path d="M 400,180 L 400,230 L 550,230 L 550,300"
+                                <path d="M 400,200 L 400,250 L 550,250 L 550,350"
+                                      stroke="#3b82f6" stroke-width="4" fill="none" marker-end="url(#arrowhead-blue)"/>
+
+                                <!-- 手动模式子流程1: 一键签到 -->
+                                <path d="M 550,350 L 550,400 L 450,400 L 450,500"
+                                      stroke="#3b82f6" stroke-width="3" fill="none" marker-end="url(#arrowhead-blue)"/>
+
+                                <!-- 手动模式子流程2: 精准签到 -->
+                                <path d="M 550,350 L 550,400 L 650,400 L 650,500 L 800,500"
+                                      stroke="#3b82f6" stroke-width="3" fill="none" marker-end="url(#arrowhead-blue)"/>
+                                <path d="M 800,500 L 800,400 L 900,400 L 900,350"
                                       stroke="#3b82f6" stroke-width="3" fill="none" marker-end="url(#arrowhead-blue)"/>
 
                                 <!-- 退出流程线 -->
-                                <path d="M 400,80 L 600,80 L 600,130 L 700,130"
-                                      stroke="#ef4444" stroke-width="3" fill="none" marker-end="url(#arrowhead-red)"/>
+                                <path d="M 400,100 L 600,100 L 600,150 L 900,150"
+                                      stroke="#ef4444" stroke-width="4" fill="none" marker-end="url(#arrowhead-red)"/>
 
                                 <!-- 步骤1: 用户登录 -->
-                                <circle cx="100" cy="80" r="35" fill="#06b6d4" stroke="#0891b2" stroke-width="2"/>
-                                <text x="100" y="80" text-anchor="middle" fill="white" font-weight="bold" font-size="18" dy="5">1</text>
-                                <text x="100" y="125" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">用户登录</text>
+                                <circle cx="100" cy="100" r="40" fill="#06b6d4" stroke="#0891b2" stroke-width="3"/>
+                                <text x="100" y="100" text-anchor="middle" fill="white" font-weight="bold" font-size="24" dy="8">1</text>
+                                <text x="100" y="160" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">用户登录</text>
 
                                 <!-- 步骤2: 更新信息 -->
-                                <circle cx="300" cy="80" r="35" fill="#06b6d4" stroke="#0891b2" stroke-width="2"/>
-                                <text x="300" y="80" text-anchor="middle" fill="white" font-weight="bold" font-size="18" dy="5">2</text>
-                                <text x="300" y="125" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">更新信息</text>
+                                <circle cx="300" cy="100" r="40" fill="#06b6d4" stroke="#0891b2" stroke-width="3"/>
+                                <text x="300" y="100" text-anchor="middle" fill="white" font-weight="bold" font-size="24" dy="8">2</text>
+                                <text x="300" y="160" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">更新信息</text>
 
                                 <!-- 步骤3: 选择模式 -->
-                                <circle cx="400" cy="180" r="35" fill="#f59e0b" stroke="#d97706" stroke-width="2"/>
-                                <text x="400" y="180" text-anchor="middle" fill="white" font-weight="bold" font-size="18" dy="5">3</text>
-                                <text x="400" y="225" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">选择模式</text>
+                                <circle cx="400" cy="200" r="40" fill="#f59e0b" stroke="#d97706" stroke-width="3"/>
+                                <text x="400" y="200" text-anchor="middle" fill="white" font-weight="bold" font-size="24" dy="8">3</text>
+                                <text x="400" y="260" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">选择模式</text>
 
                                 <!-- 自动模式 -->
-                                <circle cx="250" cy="300" r="35" fill="#10b981" stroke="#059669" stroke-width="2"/>
-                                <text x="250" y="300" text-anchor="middle" fill="white" font-weight="bold" font-size="16" dy="5">A</text>
-                                <text x="250" y="345" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">自动模式</text>
-                                <text x="250" y="365" text-anchor="middle" fill="#64748b" font-size="24">设置自动签到</text>
+                                <circle cx="250" cy="350" r="40" fill="#10b981" stroke="#059669" stroke-width="3"/>
+                                <text x="250" y="350" text-anchor="middle" fill="white" font-weight="bold" font-size="22" dy="8">A</text>
+                                <text x="250" y="410" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">自动模式</text>
+                                <text x="250" y="440" text-anchor="middle" fill="#64748b" font-size="26">设置自动签到</text>
 
                                 <!-- 手动模式 -->
-                                <circle cx="550" cy="300" r="35" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/>
-                                <text x="550" y="300" text-anchor="middle" fill="white" font-weight="bold" font-size="16" dy="5">M</text>
-                                <text x="550" y="345" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">手动模式</text>
-                                <text x="550" y="365" text-anchor="middle" fill="#64748b" font-size="24">手动操作签到</text>
+                                <circle cx="550" cy="350" r="40" fill="#3b82f6" stroke="#2563eb" stroke-width="3"/>
+                                <text x="550" y="350" text-anchor="middle" fill="white" font-weight="bold" font-size="22" dy="8">M</text>
+                                <text x="550" y="410" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">手动模式</text>
+                                <text x="550" y="440" text-anchor="middle" fill="#64748b" font-size="26">手动管理</text>
+
+                                <!-- 手动子流程1: 一键签到 -->
+                                <circle cx="450" cy="500" r="40" fill="#60a5fa" stroke="#3b82f6" stroke-width="3"/>
+                                <text x="450" y="500" text-anchor="middle" fill="white" font-weight="bold" font-size="20" dy="8">1.1</text>
+                                <text x="450" y="560" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">一键签到</text>
+                                <text x="450" y="590" text-anchor="middle" fill="#64748b" font-size="26">完成所有签到</text>
+
+                                <!-- 手动子流程2: 获取信息 -->
+                                <circle cx="650" cy="500" r="40" fill="#93c5fd" stroke="#3b82f6" stroke-width="3"/>
+                                <text x="650" y="500" text-anchor="middle" fill="white" font-weight="bold" font-size="20" dy="8">2.1</text>
+                                <text x="650" y="560" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">获取信息</text>
+                                <text x="650" y="590" text-anchor="middle" fill="#64748b" font-size="26">获取id和signId</text>
+
+                                <!-- 手动子流程3: 精准签到 -->
+                                <circle cx="900" cy="350" r="40" fill="#60a5fa" stroke="#3b82f6" stroke-width="3"/>
+                                <text x="900" y="350" text-anchor="middle" fill="white" font-weight="bold" font-size="20" dy="8">2.2</text>
+                                <text x="900" y="410" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">精准签到</text>
+                                <text x="900" y="440" text-anchor="middle" fill="#64748b" font-size="26">完成单个签到</text>
 
                                 <!-- 退出流程 -->
-                                <circle cx="700" cy="130" r="35" fill="#ef4444" stroke="#dc2626" stroke-width="2"/>
-                                <text x="700" y="130" text-anchor="middle" fill="white" font-weight="bold" font-size="16" dy="5">X</text>
-                                <text x="700" y="175" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">用户登出</text>
-                                <text x="700" y="195" text-anchor="middle" fill="#64748b" font-size="24">注销信息</text>
+                                <circle cx="900" cy="150" r="40" fill="#ef4444" stroke="#dc2626" stroke-width="3"/>
+                                <text x="900" y="150" text-anchor="middle" fill="white" font-weight="bold" font-size="22" dy="8">X</text>
+                                <text x="900" y="210" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">用户登出</text>
+                                <text x="900" y="240" text-anchor="middle" fill="#64748b" font-size="26">注销信息</text>
+
+                                <!-- 流程标签 -->
+                                <text x="200" y="50" text-anchor="middle" fill="#06b6d4" font-weight="bold" font-size="28">主流程</text>
+                                <text x="250" y="300" text-anchor="middle" fill="#10b981" font-weight="bold" font-size="28">自动流程</text>
+                                <text x="550" y="300" text-anchor="middle" fill="#3b82f6" font-weight="bold" font-size="28">手动流程</text>
 
                                 <!-- 箭头定义 -->
                                 <defs>
-                                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                        <polygon points="0 0, 10 3.5, 0 7" fill="#06b6d4"/>
+                                    <marker id="arrowhead" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+                                        <polygon points="0 0, 12 4.5, 0 9" fill="#06b6d4"/>
                                     </marker>
-                                    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                        <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+                                    <marker id="arrowhead-green" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+                                        <polygon points="0 0, 12 4.5, 0 9" fill="#10b981"/>
                                     </marker>
-                                    <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                        <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+                                    <marker id="arrowhead-blue" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+                                        <polygon points="0 0, 12 4.5, 0 9" fill="#3b82f6"/>
                                     </marker>
-                                    <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                        <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+                                    <marker id="arrowhead-red" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+                                        <polygon points="0 0, 12 4.5, 0 9" fill="#ef4444"/>
                                     </marker>
                                 </defs>
                             </svg>
 
-                            <!-- 流程说明 -->
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-8">
-                                <div class="text-center">
-                                    <div class="inline-flex items-center space-x-2 bg-cyan-100 px-3 py-2 rounded-lg">
-                                        <div class="w-3 h-3 bg-cyan-500 rounded-full"></div>
-                                        <span class="text-sm font-medium text-cyan-800">主流程</span>
+                            <!-- 更详细的流程说明 -->
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                                <!-- 主流程 -->
+                                <div class="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
+                                    <div class="flex items-center space-x-2 mb-3">
+                                        <div class="w-4 h-4 bg-cyan-500 rounded-full"></div>
+                                        <span class="text-sm font-semibold text-cyan-800">主流程</span>
                                     </div>
-                                    <p class="text-xs text-gray-600 mt-1">必须步骤</p>
+                                    <div class="space-y-2 text-xs text-gray-700">
+                                        <div class="flex items-start space-x-2">
+                                            <span class="bg-cyan-500 text-white rounded w-4 h-4 flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                                            <span>用户登录：身份验证</span>
+                                        </div>
+                                        <div class="flex items-start space-x-2">
+                                            <span class="bg-cyan-500 text-white rounded w-4 h-4 flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                                            <span>更新信息：完善资料</span>
+                                        </div>
+                                        <div class="flex items-start space-x-2">
+                                            <span class="bg-cyan-500 text-white rounded w-4 h-4 flex items-center justify-center text-xs font-bold shrink-0">3</span>
+                                            <span>选择模式：自动/手动</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="text-center">
-                                    <div class="inline-flex items-center space-x-2 bg-green-100 px-3 py-2 rounded-lg">
-                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                                        <span class="text-sm font-medium text-green-800">自动模式</span>
+
+                                <!-- 自动模式 -->
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <div class="flex items-center space-x-2 mb-3">
+                                        <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-semibold text-green-800">自动模式</span>
                                     </div>
-                                    <p class="text-xs text-gray-600 mt-1">设置后自动处理</p>
+                                    <div class="space-y-2 text-xs text-gray-700">
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-robot text-green-500 text-xs mt-0.5"></i>
+                                            <span>设置自动签到开关</span>
+                                        </div>
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-cog text-green-500 text-xs mt-0.5"></i>
+                                            <span>系统后台自动处理</span>
+                                        </div>
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-check text-green-500 text-xs mt-0.5"></i>
+                                            <span>无需手动操作干预</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="text-center">
-                                    <div class="inline-flex items-center space-x-2 bg-blue-100 px-3 py-2 rounded-lg">
-                                        <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                        <span class="text-sm font-medium text-blue-800">手动模式</span>
+
+                                <!-- 手动模式 -->
+                                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                    <div class="flex items-center space-x-2 mb-3">
+                                        <div class="w-4 h-4 bg-blue-500 rounded-full"></div>
+                                        <span class="text-sm font-semibold text-blue-800">手动模式</span>
                                     </div>
-                                    <p class="text-xs text-gray-600 mt-1">手动操作签到</p>
+                                    <div class="space-y-2 text-xs text-gray-700">
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-bolt text-blue-500 text-xs mt-0.5"></i>
+                                            <span>一键签到：批量完成所有</span>
+                                        </div>
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-search text-blue-500 text-xs mt-0.5"></i>
+                                            <span>获取信息：查看签到详情</span>
+                                        </div>
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-check-circle text-blue-500 text-xs mt-0.5"></i>
+                                            <span>精准签到：单个处理</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="text-center">
-                                    <div class="inline-flex items-center space-x-2 bg-red-100 px-3 py-2 rounded-lg">
-                                        <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-                                        <span class="text-sm font-medium text-red-800">退出流程</span>
+
+                                <!-- 退出流程 -->
+                                <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                                    <div class="flex items-center space-x-2 mb-3">
+                                        <div class="w-4 h-4 bg-red-500 rounded-full"></div>
+                                        <span class="text-sm font-semibold text-red-800">退出流程</span>
                                     </div>
-                                    <p class="text-xs text-gray-600 mt-1">停止使用</p>
+                                    <div class="space-y-2 text-xs text-gray-700">
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-power-off text-red-500 text-xs mt-0.5"></i>
+                                            <span>停止使用系统</span>
+                                        </div>
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-sign-out-alt text-red-500 text-xs mt-0.5"></i>
+                                            <span>用户安全登出</span>
+                                        </div>
+                                        <div class="flex items-start space-x-2">
+                                            <i class="fas fa-trash text-red-500 text-xs mt-0.5"></i>
+                                            <span>注销登录信息</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -444,26 +536,29 @@
                     </div>
 
                     <!-- 快速开始 -->
-<!--                    <div class="bg-indigo-50 rounded-xl p-5 border-l-4 border-indigo-500">-->
-<!--                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">-->
-<!--                            <i class="fas fa-rocket text-indigo-500"></i>-->
-<!--                            <span>快速开始</span>-->
-<!--                        </h3>-->
-<!--                        <div class="bg-gray-800 rounded-lg p-4">-->
-<!--                            <code class="text-green-400 font-mono text-sm block">-->
-<!--                                # 1. 启动后端服务<br>-->
-<!--                                ./mvnw spring-boot:run<br><br>-->
-<!--                                # 2. 访问系统<br>-->
-<!--                                http://localhost:11451<br><br>-->
-<!--                                # 3. 开始使用左侧菜单测试接口-->
-<!--                            </code>-->
-<!--                        </div>-->
-<!--                    </div>-->
+                    <div class="bg-indigo-50 rounded-xl p-5 border-l-4 border-indigo-500">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
+                            <i class="fas fa-rocket text-indigo-500"></i>
+                            <span>快速开始</span>
+                        </h3>
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <code class="text-green-400 font-mono text-sm block">
+                                # 本地运行：<br>
+                                # 从github拉取项目<br>
+                                git clone https://github.com/hongchuwudi/xsyu-sign.git<br><br>
+                                # 1. 启动后端服务<br>
+                                ./mvnw spring-boot:run<br><br>
+                                # 2. 访问系统<br>
+                                http://localhost:11451<br><br>
+                                # 3. 开始使用左侧菜单测试接口<br><br>
+                            </code>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- 用户登录 -->
-            <div id="user-login" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up">
+            <div id="user-login" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-sign-in-alt text-primary"></i>
                     <span>用户登录</span>
@@ -508,7 +603,7 @@
             </div>
 
             <!-- 自动签到设置 -->
-            <div id="user-autoSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+            <div id="user-autoSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-cog text-primary"></i>
                     <span>自动签到设置</span>
@@ -556,7 +651,7 @@
             </div>
 
             <!-- 用户登出 -->
-            <div id="user-logout" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+            <div id="user-logout" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-sign-out-alt text-primary"></i>
                     <span>用户登出</span>
@@ -592,7 +687,7 @@
             </div>
 
             <!-- 更新用户信息 -->
-            <div id="user-setInfo" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+            <div id="user-setInfo" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-user-edit text-primary"></i>
                     <span>更新用户信息</span>
@@ -644,7 +739,7 @@
             </div>
 
             <!-- 获取所有签到 -->
-            <div id="sign-allSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+            <div id="sign-allSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-list text-primary"></i>
                     <span>获取所有签到</span>
@@ -698,7 +793,7 @@
             </div>
 
             <!-- 一键签到 -->
-            <div id="sign-all" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+            <div id="sign-all" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-bolt text-primary"></i>
                     <span>一键签到</span>
@@ -734,7 +829,7 @@
             </div>
 
             <!-- 获取单个签到 -->
-            <div id="sign-oneSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+            <div id="sign-oneSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-search text-primary"></i>
                     <span>获取单个签到</span>
@@ -790,7 +885,7 @@
             </div>
 
             <!-- 处理单个签到 -->
-            <div id="sign-one" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-6 animate-slide-up hidden">
+            <div id="sign-one" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
                 <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
                     <i class="fas fa-check-circle text-primary"></i>
                     <span>处理单个签到</span>

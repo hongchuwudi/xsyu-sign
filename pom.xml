@@ -89,48 +89,51 @@
             <type>pom</type>
             <scope>import</scope>
         </dependency>
+        <!-- guava 限流-->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>32.1.3-jre</version>
+        </dependency>
     </dependencies>
 
     <!-- 七. 构建配置 -->
     <build>
-        <!-- 插件管理：统一管理插件版本 -->
-        <pluginManagement>
-            <plugins>
-                <!-- Maven编译插件 -->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId> <!-- Maven官方插件 -->
-                    <artifactId>maven-compiler-plugin</artifactId> <!-- 编译插件 -->
-                    <version>3.11.0</version> <!-- 插件版本 -->
-                    <configuration>
-                        <source>17</source> <!-- 源码兼容版本 -->
-                        <target>17</target> <!-- 目标字节码版本 -->
-                        <!-- 注解处理器路径 -->
-                        <annotationProcessorPaths>
-                            <path>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok</artifactId>
-                                <version>1.18.30</version> <!-- Lombok注解处理器 -->
-                            </path>
-                        </annotationProcessorPaths>
-                    </configuration>
-                </plugin>
+        <plugins>
+            <!-- Maven编译插件 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId> <!-- Maven官方插件 -->
+                <artifactId>maven-compiler-plugin</artifactId> <!-- 编译插件 -->
+                <version>3.11.0</version> <!-- 插件版本 -->
+                <configuration>
+                    <source>17</source> <!-- 源码兼容版本 -->
+                    <target>17</target> <!-- 目标字节码版本 -->
+                    <!-- 注解处理器路径 -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.30</version> <!-- Lombok注解处理器 -->
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
 
-                <!-- Spring Boot Maven插件 -->
-                <plugin>
-                    <groupId>org.springframework.boot</groupId>         <!-- Spring Boot组织 -->
-                    <artifactId>spring-boot-maven-plugin</artifactId>   <!-- Spring Boot打包插件 -->
-                    <version>3.5.6</version>                            <!-- 与Spring Boot版本一致 -->
-                    <configuration>
-                        <!-- 排除不打进包的依赖 -->
-                        <excludes>
-                            <exclude>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok</artifactId>         <!-- 排除Lombok，因为只是编译时需要 -->
-                            </exclude>
-                        </excludes>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
+            <!-- Spring Boot Maven插件 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>         <!-- Spring Boot组织 -->
+                <artifactId>spring-boot-maven-plugin</artifactId>   <!-- Spring Boot打包插件 -->
+                <version>3.5.6</version>                            <!-- 与Spring Boot版本一致 -->
+                <configuration>
+                    <!-- 排除不打进包的依赖 -->
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>         <!-- 排除Lombok，因为只是编译时需要 -->
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>

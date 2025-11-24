@@ -31,9 +31,9 @@ public class RedisDelaySignService {
     private static final String DELAY_QUEUE = "sign:queue";
 
     /**
-     * 每天18:30开始调度所有用户
+     * 周日-周四 18:31开始调度所有用户（周五周六不执行）
      */
-    @Scheduled(cron = "0 06 20 * * ?")
+    @Scheduled(cron = "0 31 18 * * 0,1,2,3,4")
     public void startDailySign() {
         log.info("task层-开始每日签到调度");
 
@@ -48,7 +48,7 @@ public class RedisDelaySignService {
         // 添加到队列中
         for (User user : users) {
             // 每个用户随机1-30分钟延迟
-            int delayMinutes = 1 + random.nextInt(1);
+            int delayMinutes = 1 + random.nextInt(30);
             long executeTime = System.currentTimeMillis() + (delayMinutes * 60 * 1000);
 
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -71,7 +71,7 @@ public class RedisDelaySignService {
         );
 
         if (readyUsers.isEmpty()) {
-            log.info("task层-{}-无用户需要签到", LocalTime.now());
+            log.info("task层-{}-当前时刻无用户需要签到", LocalTime.now());
             return;
         }
 

@@ -53,7 +53,7 @@ public class User implements Serializable {
     private String email;
 
     /**
-     * JWT令牌
+     * JWs令牌
      */
     private String jws;
 
@@ -67,13 +67,8 @@ public class User implements Serializable {
      */
     private LocalDateTime updatedAt;
 
-    // 自动签到时间配置
-    private Integer signRandomDelay;      // 随机延迟时间(秒)
-    private LocalDateTime signScheduledTime; // 计划签到时间
-
     /**
      * 自动签到
      */
     private Boolean autoSign;
-
 }

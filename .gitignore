@@ -37,3 +37,6 @@ application-*.yml
 
 ## 日志
 logs/
+
+## 旧文件
+old-index.html

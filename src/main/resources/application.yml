@@ -50,4 +50,11 @@ spring:
 logging:
   config: classpath:logback-spring.xml  # 指定使用我们的logback配置
 
+# JWT
+my-jwt:
+  secret-key: ${hc.jwt.secret-key}
+  ttl: ${hc.jwt.ttl}
+  token-name: ${hc.jwt.token-name}
+
+
 

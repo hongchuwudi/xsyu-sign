@@ -25,7 +25,6 @@ import java.util.List;
 @Service
 @Slf4j
 public class BaseSignService {
-
     @Autowired @Qualifier("mobileWebClient") private WebClient mobileWebClient;
     @Autowired private IUserService userService;
     @Autowired private ObjectMapper objectMapper;

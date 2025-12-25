@@ -4,6 +4,7 @@ import com.hongchu.qqrobotsign.pojo.entity.User;
 import com.hongchu.qqrobotsign.service.EmailService;
 import com.hongchu.qqrobotsign.service.IUserService;
 import com.hongchu.qqrobotsign.service.SignService;
+import com.hongchu.qqrobotsign.utils.SimpleCryptoUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -13,10 +14,7 @@ import org.springframework.stereotype.Service;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -80,5 +78,22 @@ public class RedisDelaySignService {
             redisTemplate.opsForZSet().remove(DELAY_QUEUE, username);
             log.info("task层-用户 {} - 签到完成", username);
         }
+    }
+
+    /**
+     *  周五进行jws续签并存入数据库
+     */
+    @Scheduled(cron = "0 0 18 * * 5")
+    public void AllRefresh(){
+        log.info("task层-{}-开始续签jws", LocalTime.now());
+
+        // 1. 查询所有用户信息
+        List<User> users = userService.list();
+
+        // 2. 对每个用户进行续签工作
+        users.forEach(user ->{
+            String username = user.getUsername();
+            userService.refreshJws(username);
+        });
     }
 }

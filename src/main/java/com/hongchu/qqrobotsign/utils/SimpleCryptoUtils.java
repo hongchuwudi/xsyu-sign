@@ -33,15 +33,4 @@ public class SimpleCryptoUtils {
             throw new RuntimeException("解密失败", e);
         }
     }
-
-    public static void main(String[] args) {
-        String text = "l1udadam4145";
-        System.out.println("原始: " + text);
-
-        String encrypted = encrypt(text);
-        System.out.println("加密: " + encrypted);
-
-        String decrypted = decrypt(encrypted);
-        System.out.println("解密: " + decrypted);
-    }
 }

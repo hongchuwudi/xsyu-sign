@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Slf4j
 public class TestController {
-
     /**
      * pressTest 压力测试
      * @return 成功

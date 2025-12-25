@@ -3,330 +3,549 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>油签机</title>
+    <title>油签机系统</title>
+
+    <!-- Vue 2 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!-- CryptoJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#667eea',
-                        secondary: '#764ba2',
-                        success: '#28a745',
-                        warning: '#ffc107',
-                        danger: '#dc3545',
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.5s ease-in-out',
-                        'slide-up': 'slideUp 0.5s ease-out',
-                        'slide-left': 'slideLeft 0.5s ease-out',
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(20px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        },
-                        slideLeft: {
-                            '0%': { transform: 'translateX(-20px)', opacity: '0' },
-                            '100%': { transform: 'translateX(0)', opacity: '1' },
-                        },
-                    }
-                }
-            }
-        }
-    </script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* 最简单的模态框样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
         }
 
-        .sidebar-transition {
-            transition: transform 0.3s ease;
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .card-hover {
-            transition: all 0.3s ease;
+        .modal-box {
+            background: white;
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow: auto;
+            position: relative;
+            z-index: 1001;
         }
 
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        /* 确保app内容正常显示 */
+        #app {
+            min-height: 100vh;
         }
 
-        .loader {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        /* 多行文本截断 */
+        .line-clamp-2 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen">
-<!-- 移动端顶部导航 -->
-<div class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
-    <div class="flex items-center justify-between p-4">
-        <div class="flex items-center space-x-2">
-            <i class="fas fa-robot text-primary text-xl"></i>
-            <h1 class="text-lg font-bold">油签机</h1>
-        </div>
-        <button id="mobileMenuToggle" class="p-2 rounded-md bg-gray-100">
-            <i class="fas fa-bars"></i>
-        </button>
-    </div>
-</div>
-
-<div class="flex min-h-screen pt-16 lg:pt-0">
-    <!-- 侧边栏 - 移动端为抽屉式 -->
-    <div id="sidebar" class="sidebar-transition fixed lg:static inset-y-0 left-0 z-40 w-64 lg:w-72 bg-white shadow-xl lg:shadow-none transform -translate-x-full lg:translate-x-0">
-        <div class="flex flex-col h-full">
-            <!-- 侧边栏头部 -->
-            <div class="gradient-bg text-white p-6">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-robot text-2xl"></i>
-                    <div>
-                        <h2 class="text-xl font-bold">油签机</h2>
-                        <p class="text-sm opacity-90">自动化签到解决方案</p>
-                    </div>
+<body class="bg-gray-50">
+<div id="app">
+    <!-- 登录界面 -->
+    <div v-if="!isLoggedIn" class="flex items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user-graduate text-white text-2xl"></i>
                 </div>
-                <div id="status" class="mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium bg-green-500 bg-opacity-80">
-                    ● 服务运行正常
-                </div>
+                <h2 class="text-2xl font-bold text-gray-800">校园签到系统</h2>
+                <p class="text-gray-600 mt-2">请使用学号和密码登录</p>
             </div>
 
-            <!-- 导航菜单 -->
-            <div class="flex-1 overflow-y-auto p-4">
-                <!-- 首页 -->
-                <div class="mb-6">
-                    <div class="flex items-center space-x-2 text-gray-700 font-semibold mb-2 p-2 border-l-4 border-blue-500 bg-blue-50">
-                        <i class="fas fa-home w-5 text-center text-blue-500"></i>
-                        <span>首页</span>
-                    </div>
-                    <div class="space-y-1 ml-6">
-                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 bg-blue-50 text-blue-600 border-l-2 border-blue-500 font-medium" data-section="home">
-                            <i class="fas fa-info-circle w-5 text-center"></i>
-                            <span>系统介绍</span>
-                        </div>
-                    </div>
-                </div>
-                <!-- 用户管理 -->
-                <div class="mb-6">
-                    <div class="flex items-center space-x-2 text-gray-700 font-semibold mb-2 p-2 border-l-4 border-primary bg-primary bg-opacity-10">
-                        <i class="fas fa-user w-5 text-center"></i>
-                        <span>用户管理</span>
-                    </div>
-                    <div class="space-y-1 ml-6">
-                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 bg-primary bg-opacity-15 text-primary border-l-2 border-primary font-medium" data-section="user-login">
-                            <i class="fas fa-sign-in-alt w-5 text-center"></i>
-                            <span>用户登录</span>
-                        </div>
-                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="user-setInfo">
-                            <i class="fas fa-user-edit w-5 text-center"></i>
-                            <span>更新用户信息</span>
-                        </div>
-                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="user-autoSign">
-                            <i class="fas fa-cog w-5 text-center"></i>
-                            <span>自动签到设置</span>
-                        </div>
-                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="user-logout">
-                            <i class="fas fa-sign-out-alt w-5 text-center"></i>
-                            <span>用户登出</span>
-                        </div>
-                    </div>
+            <form @submit.prevent="login" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-2">学号/用户名</label>
+                    <input v-model="loginForm.username" type="text" required placeholder="请输入学号"
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors">
                 </div>
 
-                <!-- 签到管理 -->
-                <div class="mb-6">
-                    <div class="flex items-center space-x-2 text-gray-700 font-semibold mb-2 p-2 border-l-4 border-gray-300">
-                        <i class="fas fa-tasks w-5 text-center"></i>
-                        <span>手动签到管理</span>
-                    </div>
-                    <div class="space-y-1 ml-6">
-                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="sign-allSign">
-                            <i class="fas fa-list w-5 text-center"></i>
-                            <span>获取所有签到</span>
-                        </div>
-                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="sign-all">
-                            <i class="fas fa-bolt w-5 text-center"></i>
-                            <span>一键签到</span>
-                        </div>
-<!--                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="sign-oneSign">-->
-<!--                            <i class="fas fa-search w-5 text-center"></i>-->
-<!--                            <span>获取单个签到</span>-->
-<!--                        </div>-->
-                        <div class="nav-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 text-gray-600 hover:bg-gray-100" data-section="sign-one">
-                            <i class="fas fa-check-circle w-5 text-center"></i>
-                            <span>处理单个签到</span>
-                        </div>
-                    </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-medium mb-2">密码</label>
+                    <input v-model="loginForm.password" type="password" required placeholder="请输入密码"
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors">
                 </div>
-            </div>
+
+                <button type="submit" :disabled="isLoading"
+                        class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span v-if="isLoading">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>登录中...
+                        </span>
+                    <span v-else>登录</span>
+                </button>
+
+                <div v-if="error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                    <i class="fas fa-exclamation-circle mr-2"></i>{{ error }}
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- 主内容区 -->
-    <div class="flex-1 lg:ml-0">
-        <!-- PC端顶部 -->
-        <div class="hidden lg:flex items-center justify-between p-6 text-white">
-            <h1 class="text-3xl font-bold">🤖 油签机签到系统</h1>
-            <button id="sidebarToggle" class="p-3 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition-all duration-300 hover:rotate-90">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-
-        <!-- 内容区域 -->
-        <div class="p-4 lg:p-6">
-            <!-- 首页介绍 -->
-            <div id="home" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-blue-500 pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-info-circle text-blue-500"></i>
-                    <span>系统介绍</span>
-                </h2>
-
-                <div class="space-y-6">
-                    <!-- 项目概述 -->
-                    <div class="bg-blue-50 rounded-xl p-5 border-l-4 border-blue-500">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
-                            <i class="fas fa-robot text-blue-500"></i>
-                            <span>项目概述</span>
-                        </h3>
-                        <p class="text-gray-600 leading-relaxed">
-                            <strong>油签机系统</strong> 是一个基于Spring Boot的自动化签到解决方案，专门为学生设计。
-                            系统需要用户提供自己的账号和密码，系统对密码高度加密,作者承诺不会泄露任何人的密码,仅仅用于签到。
-                            如果不知道登录账户和密码的话,可以访问西石大官网的统一登录页面。
-                            <br><strong>!!!本系统仅供学习测试,切勿非法使用!!!</strong>
-                            <a href="https://www.xsyu.edu.cn/"
-                               target="_blank"
-                               class="bg-white text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center space-x-2">
-                                <i class="fas fa-external-link-alt"></i>
-                                <span>访问XSYU</span>
-                            </a>
-                            <a href="https://ids.xsyu.edu.cn/authserver/login"
-                               target="_blank"
-                               class="bg-white text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center space-x-2">
-                                <i class="fas fa-external-link-alt"></i>
-                                <span>访问统一登录页面</span>
-                            </a>
-                            <a href="https://gwxg.xsyu.edu.cn/h5/mobile/sign/index/message"
-                               target="_blank"
-                               class="bg-white text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center space-x-2">
-                                <i class="fas fa-external-link-alt"></i>
-                                <span>访问油学通网页</span>
-                            </a>
-                            <a href="https://bgithub.xyz/hongchuwudi/xsyu-sign"
-                               target="_blank"
-                               class="bg-white text-gray-800 hover:bg-gray-100 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center space-x-2">
-                                <i class="fas fa-external-link-alt"></i>
-                                <span>访问项目仓库</span>
-                            </a>
-
-                        </p>
+    <!-- 主界面 -->
+    <div v-else class="min-h-screen flex flex-col">
+        <!-- 顶部导航 -->
+        <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div class="container mx-auto px-4">
+                <div class="flex items-center justify-between py-3">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-calendar-check text-blue-500 text-xl"></i>
+                        <h1 class="text-lg font-semibold text-gray-800">签到系统</h1>
                     </div>
 
-                    <!-- 主要功能 -->
-                    <div class="bg-green-50 rounded-xl p-5 border-l-4 border-green-500">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
-                            <i class="fas fa-star text-green-500"></i>
-                            <span>主要功能</span>
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="flex items-start space-x-3">
-                                <i class="fas fa-check text-green-500 mt-1"></i>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">用户认证</h4>
-                                    <p class="text-sm text-gray-600">安全的登录登出机制</p>
-                                </div>
+                    <div class="flex items-center space-x-3">
+                        <!-- 用户信息 -->
+                        <div class="hidden sm:flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-blue-500 text-sm"></i>
                             </div>
-                            <div class="flex items-start space-x-3">
-                                <i class="fas fa-check text-green-500 mt-1"></i>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">一键签到</h4>
-                                    <p class="text-sm text-gray-600">批量处理所有签到任务</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start space-x-3">
-                                <i class="fas fa-check text-green-500 mt-1"></i>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">自动签到</h4>
-                                    <p class="text-sm text-gray-600">设置自动签到免去手动操作</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start space-x-3">
-                                <i class="fas fa-check text-green-500 mt-1"></i>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">签到记录</h4>
-                                    <p class="text-sm text-gray-600">查看历史签到记录</p>
-                                </div>
-                            </div>
+                            <span class="text-sm font-medium text-gray-700">{{ userInfo.name || userInfo.username
+                                }}</span>
                         </div>
-                    </div>
 
-                    <!-- 使用指南 -->
-                    <div class="bg-purple-50 rounded-xl p-5 border-l-4 border-purple-500">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
-                            <i class="fas fa-book-open text-purple-500"></i>
-                            <span>使用指南</span>
-                        </h3>
-                        <div class="space-y-4">
-                            <div class="flex items-start space-x-3">
-                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">1</span>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">用户登录</h4>
-                                    <p class="text-sm text-gray-600">用户名username是个人学号,登录采用XSYU官网统一账号密码</p>
-                                    <p class="text-sm text-gray-600"></p>
-                                </div>
-                            </div>
-                            <div class="flex items-start space-x-3">
-                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">2</span>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">信息设置</h4>
-                                    <p class="text-sm text-gray-600">邮箱用于通知签到结果,name用于显示通知昵称</p>
-                                    <p class="text-sm text-gray-600"></p>
-                                </div>
-                            </div>
-                            <div class="flex items-start space-x-3">
-                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">3</span>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">查看签到</h4>
-                                    <p class="text-sm text-gray-600">可以分页条件查看所有签到</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start space-x-3">
-                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">4</span>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">执行签到</h4>
-                                    <p class="text-sm text-gray-600">使用一键签到或单独处理每个签到任务,传递参数通过调用签到API返回的信息获取</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start space-x-3">
-                                <span class="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shrink-0">5</span>
-                                <div>
-                                    <h4 class="font-medium text-gray-800">设置自动化</h4>
-                                    <p class="text-sm text-gray-600">开启自动签到功能，系统会在周日-周四每天晚上自动处理签到</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 使用流程 -->
-                    <div class="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-5 border-l-4 border-cyan-500">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center space-x-2">
-                            <i class="fas fa-project-diagram text-cyan-500"></i>
-                            <span>使用流程</span>
-                        </h3>
-
+                        <!-- 菜单按钮 -->
                         <div class="relative">
+                            <button @click="toggleUserMenu"
+                                    class="p-2 rounded-lg hover:bg-gray-100">
+                                <i class="fas fa-ellipsis-v text-gray-600"></i>
+                            </button>
+
+                            <!-- 用户菜单 -->
+                            <div v-if="showUserMenu"
+                                 class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
+                                <button @click="openEditProfile"
+                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                                    <i class="fas fa-user-edit mr-2 text-gray-500"></i>修改个人信息
+                                </button>
+                                <button @click="toggleAutoSign"
+                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                                    <i class="fas fa-robot mr-2 text-gray-500"></i>
+                                    自动签到: {{ userInfo.autoSign ? '关闭' : '开启' }}
+                                </button>
+                                <button @click="openAbout"
+                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                                    <i class="fas fa-info-circle mr-2 text-blue-500"></i>关于软件
+                                </button>
+                                <div class="border-t border-gray-200 my-1"></div>
+                                <button @click="showLogoutConfirm"
+                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>注销信息
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="flex-1 container mx-auto px-4 py-6">
+            <!-- 操作栏 -->
+            <div class="mb-6 space-y-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <button @click="getAllSigns(1)" :disabled="isLoading"
+                            class="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center">
+                        <i class="fas fa-sync-alt mr-2" :class="{'fa-spin': isLoading}"></i>刷新列表
+                    </button>
+
+                    <button @click="oneKeySign" :disabled="isLoading || pendingCount === 0"
+                            :class="pendingCount === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-500 hover:opacity-90'"
+                            class="text-white px-4 py-2 rounded-lg font-medium transition-opacity flex items-center">
+                        <i class="fas fa-bolt mr-2"></i>一键签到
+                        <span v-if="pendingCount > 0"
+                              class="ml-2 bg-white text-green-600 text-xs px-2 py-0.5 rounded-full">
+                                {{ pendingCount }}
+                            </span>
+                    </button>
+
+                    <div class="flex-1 min-w-[200px]">
+                        <div class="relative">
+                            <input v-model="searchQuery" type="text" placeholder="搜索签到标题、内容..."
+                                   class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none">
+                            <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 状态筛选 -->
+                <div class="flex flex-wrap gap-2">
+                    <button @click="filterStatus = null"
+                            :class="filterStatus === null ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                        全部
+                    </button>
+                    <button @click="filterStatus = '待签到'"
+                            :class="filterStatus === '待签到' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center">
+                        <i class="fas fa-clock mr-1"></i>待签到
+                    </button>
+                    <button @click="filterStatus = '已签到'"
+                            :class="filterStatus === '已签到' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center">
+                        <i class="fas fa-check mr-1"></i>已签到
+                    </button>
+                </div>
+            </div>
+
+            <!-- 签到列表 -->
+            <div v-if="isLoading && signs.length === 0" class="flex justify-center items-center py-20">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin text-blue-500 text-3xl mb-4"></i>
+                    <p class="text-gray-600">加载中...</p>
+                </div>
+            </div>
+
+            <div v-else-if="filteredSigns.length === 0" class="text-center py-20">
+                <i class="fas fa-inbox text-gray-300 text-4xl mb-4"></i>
+                <p class="text-gray-500 mb-2">暂无签到记录</p>
+                <button @click="getAllSigns(1)" class="text-blue-500 hover:text-blue-600 text-sm">
+                    <i class="fas fa-redo mr-1"></i>刷新试试
+                </button>
+            </div>
+
+            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- 签到卡片 -->
+                <div v-for="sign in filteredSigns" :key="sign.id"
+                     class="bg-white rounded-xl border border-gray-200 p-4 shadow hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1 mr-2">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-semibold text-gray-800 text-sm truncate">{{ sign.signTitle || '未命名签到'
+                                    }}</span>
+                                <span v-if="sign.isRead === 1"
+                                      class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">已读</span>
+                            </div>
+                            <p v-if="sign.signContext" class="text-gray-600 text-sm line-clamp-2">{{ sign.signContext
+                                }}</p>
+                        </div>
+
+                        <span :class="getSignStatusClass(sign)"
+                              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium">
+                                {{ getSignStatusDesc(sign) }}
+                        </span>
+                    </div>
+
+                    <!-- 课程信息 -->
+                    <div class="flex items-center text-sm text-gray-500 mb-3">
+                        <i class="fas fa-graduation-cap mr-2"></i>
+                        <span>{{ sign.college || '未设置学院' }}</span>
+                        <span v-if="sign.major" class="mx-1">·</span>
+                        <span>{{ sign.major || '' }}</span>
+                    </div>
+
+                    <!-- 时间和位置 -->
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-clock mr-2 w-4"></i>
+                            <span>{{ formatTime(sign.start) }} - {{ formatTime(sign.end) }}</span>
+                            <span class="mx-2">|</span>
+                            <span>{{ sign.signDay || formatDate(sign.start) }}</span>
+                        </div>
+
+                        <div v-if="sign.area" class="flex items-center text-gray-600">
+                            <i class="fas fa-map-marker-alt mr-2 w-4"></i>
+                            <span class="truncate">{{ sign.area }}</span>
+                        </div>
+
+                        <div v-if="sign.createName" class="flex items-center text-gray-600">
+                            <i class="fas fa-user-tie mr-2 w-4"></i>
+                            <span>创建: {{ sign.createName }}</span>
+                            <span v-if="sign.teacher" class="ml-2">({{ sign.teacher }})</span>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
+                        <button @click="openSignDetail(sign)"
+                                class="text-blue-500 hover:text-blue-600 text-sm font-medium flex items-center">
+                            <i class="fas fa-eye mr-1"></i>查看详情
+                        </button>
+
+                        <button v-if="isValidSign(sign)" @click="signSingle(sign)" :disabled="isLoading"
+                                class="bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center">
+                            <i class="fas fa-check mr-1"></i>立即签到
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分页 -->
+            <div v-if="totalPages > 1" class="mt-6 flex justify-center">
+                <div class="flex items-center gap-2 bg-white rounded-lg shadow-sm p-2">
+                    <button @click="prevPage" :disabled="currentPage === 1"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+
+                    <span class="text-sm text-gray-600 px-2">第 {{ currentPage }} 页 / 共 {{ totalPages }} 页</span>
+
+                    <button @click="nextPage" :disabled="currentPage === totalPages"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 签到详情模态框 -->
+    <div :class="{'active': showDetailModal}" class="modal-overlay">
+        <div class="modal-box w-full max-w-2xl mx-4">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
+                <div class="flex justify-between items-start">
+                    <div class="pr-4">
+                        <h3 class="text-xl font-bold">{{ selectedSign.signTitle || '签到详情' }}</h3>
+                        <p class="text-blue-100 text-sm mt-1">{{ selectedSign.signContext || '无详细内容' }}</p>
+                    </div>
+                    <button @click="closeDetailModal" class="text-white hover:text-blue-200 text-xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6 max-h-[60vh] overflow-y-auto">
+                <div class="space-y-6">
+                    <!-- 基本信息 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">签到状态</p>
+                            <span :class="getSignStatusClass(selectedSign)"
+                                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium">
+                                     {{ getSignStatusDesc(selectedSign) }}
+                            </span>
+                        </div>
+
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">签到时间</p>
+                            <p class="font-medium">{{ formatDateTime(selectedSign.start) }} -
+                                {{ formatDateTime(selectedSign.end) }}</p>
+                        </div>
+
+                        <div>
+                            <p class="text-sm text-gray-500 mb-1">签到日期</p>
+                            <p class="font-medium">{{ selectedSign.signDay || formatDate(selectedSign.start) }}</p>
+                        </div>
+
+                        <div v-if="selectedSign.area">
+                            <p class="text-sm text-gray-500 mb-1">签到地点</p>
+                            <p class="font-medium">{{ selectedSign.area }}</p>
+                        </div>
+                    </div>
+
+                    <!-- 用户信息 -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-user-graduate text-blue-500 mr-2"></i>用户信息
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p class="text-gray-500">姓名</p>
+                                <p class="font-medium">{{ selectedSign.name || '未设置' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">学号</p>
+                                <p class="font-medium">{{ selectedSign.number || '未设置' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">学院</p>
+                                <p class="font-medium">{{ selectedSign.college || '未设置' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">专业</p>
+                                <p class="font-medium">{{ selectedSign.major || '未设置' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 创建者信息 -->
+                    <div v-if="selectedSign.createName" class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-chalkboard-teacher text-purple-500 mr-2"></i>创建者信息
+                        </h4>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-user-tie text-blue-500"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium">{{ selectedSign.createName }}</p>
+                                <p class="text-sm text-gray-500">{{ selectedSign.createCollege || '' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 p-6">
+                <div class="flex justify-end gap-3">
+                    <button @click="closeDetailModal"
+                            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        关闭
+                    </button>
+                    <button v-if="isValidSign(selectedSign)" @click="signSingle(selectedSign)"
+                            class="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center">
+                        <i class="fas fa-check mr-2"></i>立即签到
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改个人信息模态框 -->
+    <div :class="{'active': showEditProfileModal}" class="modal-overlay">
+        <div class="modal-box w-full max-w-md mx-4">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-t-lg">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold">修改个人信息</h3>
+                    <button @click="closeEditModal" class="text-white hover:text-blue-200 text-xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <form @submit.prevent="updateUserInfo" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">姓名</label>
+                        <input v-model="editForm.name" type="text"
+                               class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors">
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 text-sm font-medium mb-2">邮箱</label>
+                        <input v-model="editForm.email" type="email"
+                               class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors">
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" :disabled="isUpdating"
+                                class="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+                                <span v-if="isUpdating">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>保存中...
+                                </span>
+                            <span v-else>保存修改</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关于软件模态框 -->
+    <div :class="{'active': showAboutModal}" class="modal-overlay">
+        <div class="modal-box w-full max-w-4xl mx-4">
+            <!-- 修改顶部：使用系统风格 -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-t-lg">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>关于软件
+                    </h3>
+                    <button @click="closeAboutModal" class="text-white hover:text-blue-200 text-xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6" style="max-height: 70vh; overflow-y: auto;">
+                <div class="space-y-6">
+                    <!-- 修改作者信息：简洁样式 -->
+                    <div class="bg-white rounded-lg p-6 border border-gray-200">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <div class="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-code text-white text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-1">
+                                <h4 class="font-bold text-gray-800 mb-2 text-lg">作者信息</h4>
+                                <div class="space-y-2">
+                                    <p class="text-gray-700">
+                                        <span class="font-medium">虹初 (hongchu)</span> - 作者承诺绝对对用户信息保密,信息严格加密
+                                    </p>
+                                    <p class="text-gray-600 text-sm">
+                                        <i class="fab fa-qq text-blue-500 mr-1"></i> QQ: 2772167017
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 修改项目链接：防止溢出 -->
+                    <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                        <h4 class="font-bold text-gray-800 mb-4 text-lg">相关链接</h4>
+                        <div class="space-y-3">
+                            <a href="https://bgithub.xyz/hongchuwudi" target="_blank"
+                               class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow transition-all group">
+                                <i class="fas fa-home text-blue-500 mr-3 text-lg"></i>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-800 truncate">项目主页</p>
+                                    <p class="text-sm text-gray-500 truncate group-hover:text-blue-600">bgithub.xyz/hongchuwudi</p>
+                                </div>
+                                <i class="fas fa-external-link-alt text-gray-400 ml-2"></i>
+                            </a>
+
+                            <a href="https://github.com/hongchuwudi/xsyu-sign" target="_blank"
+                               class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow transition-all group">
+                                <i class="fab fa-github text-gray-800 mr-3 text-lg"></i>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-800 truncate">项目仓库</p>
+                                    <p class="text-sm text-gray-500 truncate group-hover:text-gray-700">github.com/hongchuwudi/xsyu-sign</p>
+                                </div>
+                                <i class="fas fa-external-link-alt text-gray-400 ml-2"></i>
+                            </a>
+
+                            <a href="https://www.xsyu.edu.cn/" target="_blank"
+                               class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-red-300 hover:shadow transition-all group">
+                                <i class="fas fa-university text-red-500 mr-3 text-lg"></i>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-800 truncate">学校官网</p>
+                                    <p class="text-sm text-gray-500 truncate group-hover:text-red-600">www.xsyu.edu.cn</p>
+                                </div>
+                                <i class="fas fa-external-link-alt text-gray-400 ml-2"></i>
+                            </a>
+
+                            <!-- 修改油学通链接：添加换行处理 -->
+                            <a href="https://gwxg.xsyu.edu.cn/h5/mobile/sign/index/message" target="_blank"
+                               class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-green-300 hover:shadow transition-all group">
+                                <i class="fas fa-sign-in-alt text-green-500 mr-3 text-lg"></i>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-800">油学通签到模块</p>
+                                    <p class="text-sm text-gray-500 break-words group-hover:text-green-600">
+                                        gwxg.xsyu.edu.cn/h5/mobile/sign/index/message
+                                    </p>
+                                </div>
+                                <i class="fas fa-external-link-alt text-gray-400 ml-2"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- 工作流程 -->
+                    <div class="bg-white rounded-lg p-6 border border-gray-200">
+                        <h4 class="font-bold text-gray-800 mb-4 text-lg">系统工作流程</h4>
+                        <div class="bg-gray-50 rounded-lg p-4">
                             <!-- SVG流程图 -->
-                            <svg class="w-full h-96 md:h-80" viewBox="0 0 1000 600">
+                            <svg class="w-full h-80" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
                                 <!-- 主流程线 -->
                                 <path d="M 100,100 L 200,100 L 200,200 L 300,200 L 300,100 L 400,100 L 400,200"
                                       stroke="#06b6d4" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
@@ -425,764 +644,627 @@
                                     </marker>
                                 </defs>
                             </svg>
-
-                            <!-- 更详细的流程说明 -->
-                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-                                <!-- 主流程 -->
-                                <div class="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
-                                    <div class="flex items-center space-x-2 mb-3">
-                                        <div class="w-4 h-4 bg-cyan-500 rounded-full"></div>
-                                        <span class="text-sm font-semibold text-cyan-800">主流程</span>
-                                    </div>
-                                    <div class="space-y-2 text-xs text-gray-700">
-                                        <div class="flex items-start space-x-2">
-                                            <span class="bg-cyan-500 text-white rounded w-4 h-4 flex items-center justify-center text-xs font-bold shrink-0">1</span>
-                                            <span>用户登录：身份验证</span>
-                                        </div>
-                                        <div class="flex items-start space-x-2">
-                                            <span class="bg-cyan-500 text-white rounded w-4 h-4 flex items-center justify-center text-xs font-bold shrink-0">2</span>
-                                            <span>更新信息：完善资料</span>
-                                        </div>
-                                        <div class="flex items-start space-x-2">
-                                            <span class="bg-cyan-500 text-white rounded w-4 h-4 flex items-center justify-center text-xs font-bold shrink-0">3</span>
-                                            <span>选择模式：自动/手动</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 自动模式 -->
-                                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-                                    <div class="flex items-center space-x-2 mb-3">
-                                        <div class="w-4 h-4 bg-green-500 rounded-full"></div>
-                                        <span class="text-sm font-semibold text-green-800">自动模式</span>
-                                    </div>
-                                    <div class="space-y-2 text-xs text-gray-700">
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-robot text-green-500 text-xs mt-0.5"></i>
-                                            <span>设置自动签到开关</span>
-                                        </div>
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-cog text-green-500 text-xs mt-0.5"></i>
-                                            <span>系统后台自动处理</span>
-                                        </div>
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-check text-green-500 text-xs mt-0.5"></i>
-                                            <span>无需手动操作干预</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 手动模式 -->
-                                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                    <div class="flex items-center space-x-2 mb-3">
-                                        <div class="w-4 h-4 bg-blue-500 rounded-full"></div>
-                                        <span class="text-sm font-semibold text-blue-800">手动模式</span>
-                                    </div>
-                                    <div class="space-y-2 text-xs text-gray-700">
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-bolt text-blue-500 text-xs mt-0.5"></i>
-                                            <span>一键签到：批量完成所有</span>
-                                        </div>
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-search text-blue-500 text-xs mt-0.5"></i>
-                                            <span>获取信息：查看签到详情</span>
-                                        </div>
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-check-circle text-blue-500 text-xs mt-0.5"></i>
-                                            <span>精准签到：单个处理</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 退出流程 -->
-                                <div class="bg-red-50 p-4 rounded-lg border border-red-200">
-                                    <div class="flex items-center space-x-2 mb-3">
-                                        <div class="w-4 h-4 bg-red-500 rounded-full"></div>
-                                        <span class="text-sm font-semibold text-red-800">退出流程</span>
-                                    </div>
-                                    <div class="space-y-2 text-xs text-gray-700">
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-power-off text-red-500 text-xs mt-0.5"></i>
-                                            <span>停止使用系统</span>
-                                        </div>
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-sign-out-alt text-red-500 text-xs mt-0.5"></i>
-                                            <span>用户安全登出</span>
-                                        </div>
-                                        <div class="flex items-start space-x-2">
-                                            <i class="fas fa-trash text-red-500 text-xs mt-0.5"></i>
-                                            <span>注销登录信息</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- 技术特性 -->
-                    <div class="bg-orange-50 rounded-xl p-5 border-l-4 border-orange-500">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
-                            <i class="fas fa-cogs text-orange-500"></i>
-                            <span>技术特性</span>
-                        </h3>
-                        <div class="flex flex-wrap gap-2">
-                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">Spring Boot</span>
-                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">AES强加密</span>
-                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">RESTful API</span>
-                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">响应式设计</span>
-                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">限流保护</span>
-                            <span class="bg-white px-3 py-1 rounded-full text-sm font-medium text-orange-600 border border-orange-200">MyBatis Plus</span>
-                        </div>
-                    </div>
-
-                    <!-- 快速开始 -->
-                    <div class="bg-indigo-50 rounded-xl p-5 border-l-4 border-indigo-500">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center space-x-2">
-                            <i class="fas fa-rocket text-indigo-500"></i>
-                            <span>快速开始</span>
-                        </h3>
-                        <div class="bg-gray-800 rounded-lg p-4">
-                            <code class="text-green-400 font-mono text-sm block">
-                                # 本地运行：<br>
-                                # 从github拉取项目<br>
-                                git clone https://github.com/hongchuwudi/xsyu-sign.git<br><br>
-                                # 1. 启动后端服务<br>
-                                ./mvnw spring-boot:run<br><br>
-                                # 2. 访问系统<br>
-                                http://localhost:11451<br><br>
-                                # 3. 开始使用左侧菜单测试接口<br><br>
-                            </code>
+                    <!-- 说明信息 -->
+                    <div class="bg-blue-50 rounded-lg p-6 border border-blue-100">
+                        <h4 class="font-bold text-gray-800 mb-3 text-lg">使用说明</h4>
+                        <div class="space-y-2 text-gray-700">
+                            <p class="flex items-start">
+                                <i class="fas fa-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
+                                <span>本系统为西安石油大学校园签到辅助工具</span>
+                            </p>
+                            <p class="flex items-start">
+                                <i class="fas fa-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
+                                <span>支持自动签到和手动签到两种模式</span>
+                            </p>
+                            <p class="flex items-start">
+                                <i class="fas fa-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
+                                <span>请遵守学校规定，诚信使用签到系统</span>
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 用户登录 -->
-            <div id="user-login" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-sign-in-alt text-primary"></i>
-                    <span>用户登录</span>
-                </h2>
-
-                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
-                    <div class="flex flex-wrap items-center gap-2 mb-3">
-                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
-                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/user/login</code>
-                    </div>
-                    <p class="description text-gray-600 mb-4">用户登录并注册签到信息</p>
-
-                    <div class="parameters mb-4">
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">username</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">用户名</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">psd</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">密码</div>
-                        </div>
-                    </div>
-
-                    <div class="test-area bg-gray-100 rounded-lg p-4">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-login">
-                        <input type="password" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="密码" id="psd-login">
-                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('login')">
-                            <i class="fas fa-play"></i>
-                            <span>发送请求</span>
-                        </button>
-                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-login"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 自动签到设置 -->
-            <div id="user-autoSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-cog text-primary"></i>
-                    <span>自动签到设置</span>
-                </h2>
-
-                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
-                    <div class="flex flex-wrap items-center gap-2 mb-3">
-                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
-                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/user/auto-sign/{username}/{isAuto}</code>
-                    </div>
-                    <p class="description text-gray-600 mb-4">设置是否自动签到(每天晚上6:30-8:00随机时刻自动签到)</p>
-
-                    <div class="parameters mb-4">
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">username</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">用户名</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">isAuto</span>
-                                <span class="param-type text-gray-500 text-sm">boolean</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">是否自动签到 (true/false)</div>
-                        </div>
-                    </div>
-
-                    <div class="test-area bg-gray-100 rounded-lg p-4">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-autoSign">
-                        <select class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" id="isAuto-autoSign">
-                            <option value="true">是</option>
-                            <option value="false">否</option>
-                        </select>
-                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('autoSign')">
-                            <i class="fas fa-play"></i>
-                            <span>发送请求</span>
-                        </button>
-                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-autoSign"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 用户登出 -->
-            <div id="user-logout" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-sign-out-alt text-primary"></i>
-                    <span>用户登出</span>
-                </h2>
-
-                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
-                    <div class="flex flex-wrap items-center gap-2 mb-3">
-                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
-                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/user/logout/{username}</code>
-                    </div>
-                    <p class="description text-gray-600 mb-4">用户登出-清理数据库的所有登录信息</p>
-
-                    <div class="parameters mb-4">
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">username</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">用户名</div>
-                        </div>
-                    </div>
-
-                    <div class="test-area bg-gray-100 rounded-lg p-4">
-                        <input type="text" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-logout">
-                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('logout')">
-                            <i class="fas fa-play"></i>
-                            <span>发送请求</span>
-                        </button>
-                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-logout"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 更新用户信息 -->
-            <div id="user-setInfo" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-user-edit text-primary"></i>
-                    <span>更新用户信息</span>
-                </h2>
-
-                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
-                    <div class="flex flex-wrap items-center gap-2 mb-3">
-                        <span class="method post bg-primary text-white px-3 py-1 rounded-full text-sm font-bold">POST</span>
-                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/user/info/{username}</code>
-                    </div>
-                    <p class="description text-gray-600 mb-4">更新用户基本信息</p>
-
-                    <div class="parameters mb-4">
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">username</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">用户名</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-warning transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">name</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">姓名</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-warning transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">email</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">邮箱</div>
-                        </div>
-                    </div>
-
-                    <div class="test-area bg-gray-100 rounded-lg p-4">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-setInfo">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="姓名 (可选)" id="name-setInfo">
-                        <input type="email" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="邮箱 (可选)" id="email-setInfo">
-                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('setInfo')">
-                            <i class="fas fa-play"></i>
-                            <span>测试接口</span>
-                        </button>
-                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-setInfo"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 获取所有签到 -->
-            <div id="sign-allSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-list text-primary"></i>
-                    <span>获取所有签到</span>
-                </h2>
-
-                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
-                    <div class="flex flex-wrap items-center gap-2 mb-3">
-                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
-                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/sign/allSign/{username}</code>
-                    </div>
-                    <p class="description text-gray-600 mb-4">获取用户的所有签到任务列表</p>
-
-                    <div class="parameters mb-4">
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">username</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">用户名</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">page</span>
-                                <span class="param-type text-gray-500 text-sm">integer</span>
-                                <span class="text-gray-500 text-sm">默认: 1</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">页码</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">size</span>
-                                <span class="param-type text-gray-500 text-sm">integer</span>
-                                <span class="text-gray-500 text-sm">默认: 10</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">每页数量</div>
-                        </div>
-                    </div>
-
-                    <div class="test-area bg-gray-100 rounded-lg p-4">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-allSign">
-                        <input type="number" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="页码 (默认1)" id="page-allSign">
-                        <input type="number" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="每页数量 (默认10)" id="size-allSign">
-                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('allSign')">
-                            <i class="fas fa-play"></i>
-                            <span>发送请求</span>
-                        </button>
-                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-allSign"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 一键签到 -->
-            <div id="sign-all" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-bolt text-primary"></i>
-                    <span>一键签到</span>
-                </h2>
-
-                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
-                    <div class="flex flex-wrap items-center gap-2 mb-3">
-                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
-                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/sign/all/{username}</code>
-                    </div>
-                    <p class="description text-gray-600 mb-4">一键执行所有签到任务</p>
-
-                    <div class="parameters mb-4">
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">username</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">用户名</div>
-                        </div>
-                    </div>
-
-                    <div class="test-area bg-gray-100 rounded-lg p-4">
-                        <input type="text" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-all">
-                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('all')">
-                            <i class="fas fa-play"></i>
-                            <span>发送请求</span>
-                        </button>
-                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-all"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 获取单个签到 -->
-            <div id="sign-oneSign" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-search text-primary"></i>
-                    <span>获取单个签到</span>
-                </h2>
-
-                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
-                    <div class="flex flex-wrap items-center gap-2 mb-3">
-                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
-                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base break-all lg:break-keep">
-                            /sign/oneSign/{username}/{signId}/{schoolId}
-                        </code>
-                    </div>
-                    <p class="description text-gray-600 mb-4">获取指定签到的详细信息</p>
-
-                    <div class="parameters mb-4">
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">username</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">用户名</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">signId</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">签到ID</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">schoolId</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">学校ID</div>
-                        </div>
-                    </div>
-
-                    <div class="test-area bg-gray-100 rounded-lg p-4">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-oneSign">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="签到ID" id="signId-oneSign">
-                        <input type="text" class="test-input w-full p-3 mb-3 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="学校ID" id="schoolId-oneSign">
-                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('oneSign')">
-                            <i class="fas fa-play"></i>
-                            <span>发送请求</span>
-                        </button>
-                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-oneSign"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 处理单个签到 -->
-            <div id="sign-one" class="api-section bg-white rounded-2xl shadow-lg p-6 mb-40 animate-slide-up hidden">
-                <h2 class="text-xl lg:text-2xl font-bold text-gray-800 border-b-2 border-primary pb-3 mb-4 flex items-center space-x-2">
-                    <i class="fas fa-check-circle text-primary"></i>
-                    <span>处理单个签到</span>
-                </h2>
-
-                <div class="card-hover bg-gray-50 rounded-xl p-5 mb-5 border-l-4 border-primary animate-slide-left">
-                    <div class="flex flex-wrap items-center gap-2 mb-3">
-                        <span class="method get bg-success text-white px-3 py-1 rounded-full text-sm font-bold">GET</span>
-                        <code class="endpoint font-mono text-gray-800 text-sm lg:text-base">/sign/one</code>
-                    </div>
-                    <p class="description text-gray-600 mb-4">处理单个签到任务</p>
-
-                    <div class="parameters mb-4">
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">username</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">用户名</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">id</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">ID,通过获取查看某个签到信息来获取这个字段的值</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">signId</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">签到ID,通过获取单个签到接口获取这个字段的值</div>
-                        </div>
-                        <div class="param-item bg-white p-3 rounded-lg mb-2 border-l-3 border-success transition-all duration-200 hover:translate-x-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="param-name font-bold text-gray-800">schoolId</span>
-                                <span class="param-type text-gray-500 text-sm">string</span>
-                                <span class="param-required text-danger text-xs font-medium">必需</span>
-                            </div>
-                            <div class="text-gray-600 text-sm mt-1">学校ID,默认为17不用动</div>
-                        </div>
-                    </div>
-
-                    <div class="test-area bg-gray-100 rounded-lg p-4">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="用户名" id="username-one">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="ID" id="id-one">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="签到ID" id="signId-one">
-                        <input type="text" class="test-input w-full p-3 mb-2 border border-gray-300 rounded-lg font-mono focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-20" placeholder="学校ID" id="schoolId-one" value="17">
-                        <button class="test-btn bg-primary text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-lg w-full" onclick="testApi('one')">
-                            <i class="fas fa-play"></i>
-                            <span>发送请求</span>
-                        </button>
-                        <div class="response mt-4 p-4 bg-gray-800 text-green-400 rounded-lg font-mono whitespace-pre-wrap max-h-60 overflow-y-auto hidden animate-fade-in" id="response-one"></div>
-                    </div>
+            <div class="border-t border-gray-200 p-6">
+                <div class="flex justify-between items-center">
+                    <p class="text-sm text-gray-500">
+                        <i class="far fa-copyright mr-1"></i> --@hongchu@--
+                    </p>
+                    <button @click="closeAboutModal"
+                            class="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors">
+                        关闭
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 移动端遮罩层 -->
-    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
+    <!-- 注销确认模态框 -->
+    <div :class="{'active': showLogoutConfirmModal}" class="modal-overlay">
+        <div class="modal-box w-full max-w-md mx-4">
+            <div class="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-xl mr-3"></i>
+                    <h3 class="text-xl font-bold">确认注销</h3>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-sign-out-alt text-red-500 text-2xl"></i>
+                    </div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-2">确认要注销吗？</h4>
+                    <p class="text-gray-600">
+                        注销后，您的个人信息将从系统中移除,不会再自动签到。<br>
+                        下次使用需要重新登录。
+                    </p>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 p-6">
+                <div class="flex justify-center gap-4">
+                    <button @click="cancelLogout"
+                            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        取消
+                    </button>
+                    <button @click="confirmLogout"
+                            class="bg-red-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center">
+                        <i class="fas fa-sign-out-alt mr-2"></i>
+                        确认注销
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息提示 -->
+    <div v-if="message"
+         :class="messageType === 'success' ? 'bg-green-500' : 'bg-red-500'"
+         class="fixed top-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg z-50 max-w-md">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i :class="messageType === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"
+                   class="mr-2"></i>
+                {{ message }}
+            </div>
+            <button @click="message = ''" class="ml-4 hover:opacity-80">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
-    const BASE_URL = 'http://49.232.16.204:11451';
+    // API基础URL
+    const API_BASE = window.location.origin.includes('localhost')
+        ? 'http://localhost:11451'
+        : window.location.origin;
 
-    // 页面加载完成后初始化
-    document.addEventListener('DOMContentLoaded', function() {
-        const navItems = document.querySelectorAll('.nav-item');
-        const apiSections = document.querySelectorAll('.api-section');
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('overlay');
-
-        // 默认显示第一个接口
-        showSection('home');
-
-        // 导航项点击事件
-        navItems.forEach(item => {
-            item.addEventListener('click', function() {
-                // 移除所有活动状态
-                navItems.forEach(nav => {
-                    nav.classList.remove('bg-primary', 'bg-opacity-15', 'text-primary', 'border-l-2', 'border-primary', 'font-medium');
-                    nav.classList.add('text-gray-600', 'hover:bg-gray-100');
-                });
-
-                // 添加当前活动状态
-                this.classList.remove('text-gray-600', 'hover:bg-gray-100');
-                this.classList.add('bg-primary', 'bg-opacity-15', 'text-primary', 'border-l-2', 'border-primary', 'font-medium');
-
-                // 显示对应部分
-                const sectionId = this.getAttribute('data-section');
-                showSection(sectionId);
-
-                // 在移动设备上点击后关闭侧边栏
-                if (window.innerWidth < 1024) {
-                    sidebar.classList.add('-translate-x-full');
-                    overlay.classList.add('hidden');
-                }
-            });
-        });
-
-        // PC端切换侧边栏
-        if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('lg:w-20');
-                sidebar.classList.toggle('lg:w-72');
-
-                // 隐藏/显示侧边栏文本
-                const sidebarTexts = document.querySelectorAll('.sidebar-text');
-                sidebarTexts.forEach(text => {
-                    text.classList.toggle('lg:hidden');
-                });
-            });
-        }
-
-        // 移动端切换菜单
-        if (mobileMenuToggle) {
-            mobileMenuToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('-translate-x-full');
-                overlay.classList.toggle('hidden');
-            });
-        }
-
-        // 点击遮罩层关闭侧边栏
-        if (overlay) {
-            overlay.addEventListener('click', function() {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            });
-        }
-
-        // 检查服务状态
-        checkServiceStatus();
-    });
-
-    // 显示指定部分
-    function showSection(sectionId) {
-        const apiSections = document.querySelectorAll('.api-section');
-        apiSections.forEach(section => {
-            if (section.id === sectionId) {
-                section.classList.remove('hidden');
-                // 滚动到该部分
-                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                section.classList.add('hidden');
-            }
-        });
-    }
-
-    // 测试API
-    async function testApi(apiType) {
-        const responseEl = document.getElementById(`response-${apiType}`);
-        const testBtn = document.querySelector(`#response-${apiType}`).previousElementSibling;
-        const originalText = testBtn.innerHTML;
-
-        responseEl.classList.remove('hidden');
-        responseEl.textContent = '请求中...';
-        testBtn.innerHTML = '<div class="loader w-5 h-5 mr-2"></div><span>请求中...</span>';
-        testBtn.disabled = true;
-
-        try {
-            let url = '';
-            let response;
-            switch(apiType) {
-                // 用户
-                case 'login':
-                    const username4 = document.getElementById('username-login').value;
-                    const psd = document.getElementById('psd-login').value;
-                    const encryptPsd = simpleEncrypt(psd);
-                    url = `${BASE_URL}/user/login?username=${username4}&psd=${encodeURIComponent(encryptPsd)}`;
-                    response = await fetch(url, {method: 'POST'});
-                    break;
-                case 'autoSign':
-                    const username5 = document.getElementById('username-autoSign').value;
-                    const isAuto = document.getElementById('isAuto-autoSign').value;
-                    url = `${BASE_URL}/user/auto-sign/${username5}/${isAuto}`;
-                    response = await fetch(url, {method: 'PUT'});
-                    break;
-                case 'logout':
-                    const username6 = document.getElementById('username-logout').value;
-                    url = `${BASE_URL}/user/logout/${username6}`;
-                    response = await fetch(url, {method: 'POST'});
-                    break;
-                case 'setInfo':
-                    const username8 = document.getElementById('username-setInfo').value;
-                    url = `${BASE_URL}/user/info/${username8}`;
-                    response = await fetch(url, {method: 'PUT'});
-                    break;
-                // 签到
-                case 'allSign':
-                    const username1 = document.getElementById('username-allSign').value;
-                    const page = document.getElementById('page-allSign').value || '1';
-                    const size = document.getElementById('size-allSign').value || '10';
-                    url = `${BASE_URL}/sign/allSign/${username1}?page=${page}&size=${size}`;
-                    response = await fetch(url);
-                    break;
-                case 'all':
-                    const username2 = document.getElementById('username-all').value;
-                    url = `${BASE_URL}/sign/all/${username2}`;
-                    response = await fetch(url, {method: 'POST'});
-                    break;
-                case 'oneSign':
-                    const username3 = document.getElementById('username-oneSign').value;
-                    const signId = document.getElementById('signId-oneSign').value;
-                    const schoolId = document.getElementById('schoolId-oneSign').value;
-                    url = `${BASE_URL}/sign/oneSign/${username3}/${signId}/${schoolId}`;
-                    response = await fetch(url);
-                    break;
-                case 'one':
-                    const username7 = document.getElementById('username-one').value;
-                    const id = document.getElementById('id-one').value;
-                    const signIdOne = document.getElementById('signId-one').value;
-                    const schoolIdOne = document.getElementById('schoolId-one').value;
-                    const inArea = document.getElementById('inArea-one').value || '1';
-                    const areaJSON = document.getElementById('areaJSON-one').value;
-                    const latitude = document.getElementById('latitude-one').value;
-                    const longitude = document.getElementById('longitude-one').value;
-                    let params = [];
-                    if (username7) params.push(`username=${username7}`);
-                    if (id) params.push(`id=${id}`);
-                    if (signIdOne) params.push(`signId=${signIdOne}`);
-                    if (schoolIdOne) params.push(`schoolId=${schoolIdOne}`);
-                    if (inArea) params.push(`inArea=${inArea}`);
-                    if (areaJSON) params.push(`areaJSON=${encodeURIComponent(areaJSON)}`);
-                    if (latitude) params.push(`latitude=${latitude}`);
-                    if (longitude) params.push(`longitude=${longitude}`);
-                    url = `${BASE_URL}/sign/one?${params.join('&')}`;
-                    response = await fetch(url, {method: 'POST'});
-                    break;
-            }
-
-
-            const data = await response.text();
-
-            // 设置响应元素样式
-            responseEl.style.whiteSpace = 'pre-wrap';
-            responseEl.style.wordBreak = 'break-all';
-            responseEl.style.overflowX = 'auto';
-            responseEl.style.maxWidth = '100%';
-            responseEl.style.padding = '10px';
-            responseEl.style.backgroundColor = '#f8f9fa';
-            responseEl.style.borderRadius = '5px';
-            responseEl.style.border = '1px solid #e9ecef';
-
-            try {
-                const jsonData = JSON.parse(data);
-                const formattedJson = JSON.stringify(jsonData, null, 2);
-                responseEl.textContent = `状态码: ${response.status}\n\n响应数据:\n${formattedJson}`;
-            } catch (e) {
-                responseEl.textContent = `状态码: ${response.status}\n\n响应数据:\n${data}`;
-            }
-
-// 设置整体颜色
-            responseEl.style.color = response.ok ? '#2c5f2d' : '#cc0000';
-
-        } catch (error) {
-            responseEl.textContent = `请求失败: ${error.message}`;
-            responseEl.style.color = '#ff6b6b';
-        } finally {
-            testBtn.innerHTML = '<i class="fas fa-play"></i><span>发送请求</span>';
-            testBtn.disabled = false;
-        }
-    }
-
-    // 检查服务状态
-    async function checkServiceStatus() {
-        const statusEl = document.getElementById('status');
-
-        try {
-            const response = await fetch(BASE_URL);
-            if (!response.ok) {
-                throw new Error('服务异常');
-            }
-            statusEl.className = 'mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium bg-green-500 bg-opacity-80';
-            statusEl.textContent = '● 服务运行正常';
-        } catch (error) {
-            statusEl.className = 'mt-3 inline-block px-3 py-1 rounded-full text-xs font-medium bg-red-500 bg-opacity-80';
-            statusEl.textContent = '● 服务连接失败';
-        }
-    }
-
-    // 简单AES加密
+    // AES加密函数
     function simpleEncrypt(text, key = "1234567890123456") {
-        const CryptoJS = window.CryptoJS;
         const keyBytes = CryptoJS.enc.Utf8.parse(key);
-        const encrypted = CryptoJS.AES.encrypt(text, keyBytes, {
+        return CryptoJS.AES.encrypt(text, keyBytes, {
             mode: CryptoJS.mode.ECB,
             padding: CryptoJS.pad.Pkcs7
-        });
-        return encrypted.toString();
+        }).toString();
     }
+
+    // 创建Vue实例
+    new Vue({
+        el: '#app',
+        data: {
+            // 状态
+            isLoggedIn: false,
+            isLoading: false,
+            isUpdating: false,
+            error: '',
+            message: '',
+            messageType: 'success',
+            showDetailModal: false,
+            showEditProfileModal: false,
+            showUserMenu: false,
+            showAboutModal: false,
+            showLogoutConfirmModal: false,
+
+            // 用户信息
+            userInfo: {
+                id: '',
+                name: '',
+                username: '',
+                email: '',
+                jwt: '',
+                autoSign: false
+            },
+
+            // 表单
+            loginForm: {
+                username: '',
+                password: ''
+            },
+            editForm: {
+                name: '',
+                email: ''
+            },
+
+            // 签到数据
+            signs: [],
+            selectedSign: {},
+            searchQuery: '',
+            filterStatus: null,
+
+            // 分页
+            currentPage: 1,
+            pageSize: 10,
+            total: 0
+        },
+        computed: {
+            // 过滤后的签到列表
+            filteredSigns: function() {
+                let filtered = this.signs;
+
+                // 搜索过滤
+                if (this.searchQuery) {
+                    const query = this.searchQuery.toLowerCase();
+                    filtered = filtered.filter(sign =>
+                        (sign.signTitle && sign.signTitle.toLowerCase().includes(query)) ||
+                        (sign.signContext && sign.signContext.toLowerCase().includes(query)) ||
+                        (sign.college && sign.college.toLowerCase().includes(query))
+                    );
+                }
+
+                // 状态过滤 - 修改为使用状态描述过滤
+                if (this.filterStatus !== null) {
+                    filtered = filtered.filter(sign => {
+                        const statusDesc = sign.signStatusDesc || this.getSignStatusDesc(sign);
+                        return statusDesc === this.filterStatus;
+                    });
+                }
+
+                return filtered;
+            },
+
+            // 待签到数量
+            pendingCount: function() {
+                return this.signs.filter(sign => {
+                    // 待签到的条件：signStatus=2且没有date字段，且在签到时间内
+                    if (sign.signStatus === 2 && !sign.date) {
+                        const currentTime = new Date().getTime();
+                        if (sign.start && sign.end) {
+                            return currentTime >= sign.start && currentTime <= sign.end;
+                        }
+                    }
+                    return false;
+                }).length;
+            },
+
+            // 总页数
+            totalPages: function () {
+                return Math.ceil(this.total / this.pageSize);
+            }
+        },
+        methods: {
+            // 工具函数
+            formatTime: function (timestamp) {
+                if (!timestamp) return '';
+                const date = new Date(timestamp);
+                return date.toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            },
+
+            formatDateTime: function (timestamp) {
+                if (!timestamp) return '';
+                const date = new Date(timestamp);
+                return date.toLocaleString('zh-CN', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            },
+
+            formatDate: function (timestamp) {
+                if (!timestamp) return '';
+                const date = new Date(timestamp);
+                return date.toISOString().split('T')[0].replace(/-/g, '');
+            },
+
+            showMessage: function (msg, type) {
+                this.message = msg;
+                this.messageType = type || 'success';
+                setTimeout(() => {
+                    this.message = '';
+                }, 3000);
+            },
+
+            // 模态框控制
+            closeDetailModal: function () {
+                this.showDetailModal = false;
+            },
+
+            closeEditModal: function () {
+                this.showEditProfileModal = false;
+            },
+
+            toggleUserMenu: function () {
+                this.showUserMenu = !this.showUserMenu;
+                this.showDetailModal = false;
+                this.showEditProfileModal = false;
+            },
+
+            openSignDetail: function (sign) {
+                this.selectedSign = sign;
+                this.showUserMenu = false;
+                this.showEditProfileModal = false;
+                this.showDetailModal = true;
+            },
+
+            openEditProfile: function () {
+                this.editForm.name = this.userInfo.name || '';
+                this.editForm.email = this.userInfo.email || '';
+                this.showUserMenu = false;
+                this.showDetailModal = false;
+                this.showEditProfileModal = true;
+            },
+
+            openAbout: function() {
+                this.showUserMenu = false;
+                this.showDetailModal = false;
+                this.showEditProfileModal = false;
+                this.showAboutModal = true;
+            },
+
+            closeAboutModal: function() {
+                this.showAboutModal = false;
+            },
+
+            // 显示注销确认框
+            showLogoutConfirm: function() {
+                this.showUserMenu = false; // 关闭用户菜单
+                this.showLogoutConfirmModal = true;
+            },
+
+            // 取消注销
+            cancelLogout: function() {
+                this.showLogoutConfirmModal = false;
+            },
+
+            // 确认注销
+            confirmLogout: function() {
+                this.showLogoutConfirmModal = false;
+                this.logout(); // 调用原来的logout方法
+            },
+
+            // API请求
+            createRequest: function () {
+                const instance = axios.create({
+                    baseURL: API_BASE,
+                    timeout: 10000,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // 请求拦截器
+                instance.interceptors.request.use(config => {
+                    if (this.userInfo.jwt) {
+                        config.headers.Authorization = `Bearer ${this.userInfo.jwt}`;
+                    }
+                    return config;
+                });
+
+                // 响应拦截器
+                instance.interceptors.response.use(
+                    response => response,
+                    error => {
+                        if (error.response && error.response.status === 401) {
+                            localStorage.removeItem('userInfo');
+                            this.isLoggedIn = false;
+                            this.showMessage('登录已过期，请重新登录', 'error');
+                        }
+                        return Promise.reject(error);
+                    }
+                );
+
+                return instance;
+            },
+            // 登录
+            login: function () {
+                const self = this;
+                self.isLoading = true;
+                self.error = '';
+
+                const request = this.createRequest();
+                const encryptedPassword = simpleEncrypt(this.loginForm.password);
+
+                request.post('/user/login', null, {
+                    params: {
+                        username: this.loginForm.username,
+                        psd: encryptedPassword
+                    }
+                })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.userInfo = response.data.data;
+                            this.isLoggedIn = true;
+                            localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
+                            this.showMessage('登录成功！');
+                            this.getAllSigns(1);
+                        } else {
+                            this.error = response.data.message || '登录失败';
+                            this.showMessage(this.error, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        this.error = err.response?.data?.message || '登录请求失败';
+                        this.showMessage(this.error, 'error');
+                        console.error('登录错误:', err);
+                    })
+                    .finally(() => {
+                        self.isLoading = false;
+                    });
+            },
+            // 登出
+            logout: function () {
+                const request = this.createRequest();
+                request.post('/user/logout')
+                    .catch(err => console.error('登出错误:', err))
+                    .finally(() => {
+                        this.isLoggedIn = false;
+                        this.userInfo = {};
+                        this.signs = [];
+                        localStorage.removeItem('userInfo');
+                        this.loginForm = {username: '', password: ''};
+                        this.showMessage('已退出登录');
+                    });
+            },
+            // 切换自动签到
+            toggleAutoSign: function () {
+                const newAutoSign = !this.userInfo.autoSign;
+                const request = this.createRequest();
+
+                request.put(`/user/auto-sign/${newAutoSign}`)
+                    .then(() => {
+                        this.userInfo.autoSign = newAutoSign;
+                        this.showMessage(`自动签到已${newAutoSign ? '开启' : '关闭'}`);
+                        this.showUserMenu = false;
+                    })
+                    .catch(err => {
+                        this.showMessage('修改失败', 'error');
+                        console.error('修改自动签到错误:', err);
+                    });
+            },
+            // 更新用户信息
+            updateUserInfo: function () {
+                this.isUpdating = true;
+                const request = this.createRequest();
+                const params = {};
+
+                if (this.editForm.name) params.name = this.editForm.name;
+                if (this.editForm.email) params.email = this.editForm.email;
+
+                request.put('/user/info/', null, {params})
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.userInfo.name = this.editForm.name || this.userInfo.name;
+                            this.userInfo.email = this.editForm.email || this.userInfo.email;
+                            this.showEditProfileModal = false;
+                            this.showMessage('个人信息更新成功');
+                        }
+                    })
+                    .catch(err => {
+                        this.showMessage('更新失败', 'error');
+                        console.error('更新用户信息错误:', err);
+                    })
+                    .finally(() => {
+                        this.isUpdating = false;
+                    });
+            },
+            // 获取用户信息
+            getUserInfo: function () {
+                const request = this.createRequest();
+                request.get('/user/info')
+                    .then(response => {
+                        if (response.data.code === 0) {
+                            this.userInfo = response.data.data;
+                            this.isLoggedIn = true;
+                            localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
+                            this.getAllSigns(1);
+                        }
+                    })
+            },
+            // 获取所有签到
+            getAllSigns: function (page) {
+                this.isLoading = true;
+                const request = this.createRequest();
+
+                request.get('/sign/allSign', {
+                    params: {page: page || 1, size: this.pageSize}
+                })
+                    .then(response => {
+                        if (response.data.code === 200) {
+                            this.signs = response.data.data || [];
+                            this.total = this.signs.length;
+                            this.currentPage = page || 1;
+                        }
+                    })
+                    .catch(err => {
+                        this.showMessage('获取签到列表失败', 'error');
+                        console.error('获取签到列表错误:', err);
+                    })
+                    .finally(() => {
+                        this.isLoading = false;
+                    });
+            },
+            // 一键签到
+            oneKeySign: function () {
+                if (this.pendingCount === 0) {
+                    this.showMessage('没有待签到的任务', 'error');
+                    return;
+                }
+
+                this.isLoading = true;
+                const request = this.createRequest();
+
+                request.post('/sign/all')
+                    .then(() => {
+                        this.showMessage('一键签到成功！');
+                        this.getAllSigns(this.currentPage);
+                    })
+                    .catch(err => {
+                        this.showMessage('一键签到失败', 'error');
+                        console.error('一键签到错误:', err);
+                    })
+                    .finally(() => {
+                        this.isLoading = false;
+                    });
+            },
+            // 单个签到
+            signSingle: function (sign) {
+                this.isLoading = true;
+                const request = this.createRequest();
+                const params = {
+                    id: sign.id,
+                    signId: sign.signId,
+                    schoolId: sign.schoolId,
+                    inArea: 1
+                };
+                if (sign.latitude) params.latitude = sign.latitude;
+                if (sign.longitude) params.longitude = sign.longitude;
+                if (sign.areaList) params.areaJSON = JSON.stringify(sign.areaList);
+
+                request.post('/sign/one', null, {params})
+                    .then(() => {
+                        this.showMessage('签到成功！');
+                        this.getAllSigns(this.currentPage);
+                        this.showDetailModal = false;
+                    })
+                    .catch(err => {
+                        this.showMessage('签到失败', 'error');
+                        console.error('单个签到错误:', err);
+                    })
+                    .finally(() => {
+                        this.isLoading = false;
+                    });
+            },
+            // 获取签到状态描述
+            getSignStatusDesc: function(sign) {
+                if (!sign) return '未知';
+
+                // 如果有后端直接返回的signStatusDesc，优先使用
+                if (sign.signStatusDesc) {
+                    return sign.signStatusDesc;
+                }
+
+                // 否则根据字段判断
+                if (sign.date && sign.signStatus === 2) {
+                    return '已签到';
+                } else if (!sign.date && sign.signStatus === 2) {
+                    const currentTime = new Date().getTime();
+                    if (sign.end && currentTime > sign.end) {
+                        return '已过期';
+                    }
+                    return '待签到';
+                }
+                return '未知';
+            },
+            // 获取签到状态CSS类
+            getSignStatusClass: function(sign) {
+                if (!sign) return 'bg-gray-100 text-gray-800';
+
+                // 根据signStatusDesc判断颜色
+                const status = sign.signStatusDesc || this.getSignStatusDesc(sign);
+
+                switch(status) {
+                    case '已签到':
+                        return 'bg-green-100 text-green-800';
+                    case '待签到':
+                        return 'bg-yellow-100 text-yellow-800';
+                    case '已过期':
+                        return 'bg-red-100 text-red-800';
+                    case '未开始':
+                        return 'bg-blue-100 text-blue-800';
+                    default:
+                        return 'bg-gray-100 text-gray-800';
+                }
+            },
+            // 判断是否可以签到
+            isValidSign: function(sign) {
+                if (!sign) return false;
+
+                // 根据Java实体类的isValidSign方法
+                // 已签到的不可以再签
+                if (sign.date && sign.signStatus === 2) return false;
+
+                // 检查是否在签到时间内
+                const currentTime = new Date().getTime();
+                if (sign.start && sign.end) {
+                    return currentTime >= sign.start && currentTime <= sign.end;
+                }
+
+                return false;
+            },
+
+            // 分页
+            prevPage: function () {
+                if (this.currentPage > 1) {
+                    this.getAllSigns(this.currentPage - 1);
+                }
+            },
+
+            nextPage: function () {
+                if (this.currentPage < this.totalPages) {
+                    this.getAllSigns(this.currentPage + 1);
+                }
+            },
+
+            // 初始化
+            init: function () {
+                // 关闭所有模态框
+                this.showDetailModal = false;
+                this.showEditProfileModal = false;
+                this.showUserMenu = false;
+                this.showAboutModal = false;
+                // 检查本地存储
+                const savedUserInfo = localStorage.getItem('userInfo');
+                if (savedUserInfo) {
+                    try {
+                        this.userInfo = JSON.parse(savedUserInfo);
+                        this.isLoggedIn = true;
+                        this.getAllSigns(1);
+                    } catch (e) {
+                        console.error('解析用户信息失败:', e);
+                        localStorage.removeItem('userInfo');
+                    }
+                }
+            }
+        },
+        mounted: function () {
+            this.init();
+
+            // 点击外部关闭用户菜单
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.relative') && !e.target.closest('.p-2')) {
+                    this.showUserMenu = false;
+                }
+            });
+
+            // ESC键关闭模态框
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    this.showDetailModal = false;
+                    this.showEditProfileModal = false;
+                    this.showUserMenu = false;
+                    this.showAboutModal = false;
+                }
+            });
+        }
+    });
 </script>
 </body>
 </html>

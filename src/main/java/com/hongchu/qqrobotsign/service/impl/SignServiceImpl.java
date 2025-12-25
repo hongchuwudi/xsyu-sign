@@ -56,6 +56,7 @@ public class SignServiceImpl implements SignService {
             .filter(item ->
                 // 检查基础状态：未签到
                 item.getSignStatus() != null && item.getSignStatus() == 1 &&
+                item.getType() != null && item.getType() == 0 ||
                 // 检查结束时间：未过期（当前时间小于结束时间）
                 item.getEnd() != null && item.getEnd() > System.currentTimeMillis() &&
                 // 可选：检查开始时间：已经开始（当前时间大于等于开始时间）

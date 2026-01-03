@@ -1,5 +1,6 @@
 package com.hongchu.qqrobotsign.config;
 
+import com.hongchu.qqrobotsign.intercepter.AdminAuthInterceptor;
 import com.hongchu.qqrobotsign.intercepter.JwtInterceptor;
 import com.hongchu.qqrobotsign.intercepter.RateLimitInterceptor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired private RateLimitInterceptor rateLimitInterceptor;
     @Autowired private JwtInterceptor jwtInterceptor;
+    @Autowired private AdminAuthInterceptor adminAuthInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -34,6 +36,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/css/**",
                         "/js/**",
                         "/img/**",
+                        "/screenshots/**",
                         "/fonts/**"
                 )
                 .order(1);
@@ -46,7 +49,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/",
                         "/test/**",
                         "/user/login",
-                        "/sign/all-admin/**",
+                        "/user/test-login",
+                        "/user/public-key",
                         "/error",
                         "/favicon.ico",
                         // 静态资源路径
@@ -57,6 +61,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/css/**",
                         "/js/**",
                         "/img/**",
+                        "/screenshots/**",
                         "/fonts/**",
                         // 开放API文档
                         "/swagger-ui/**",
@@ -65,5 +70,16 @@ public class WebConfig implements WebMvcConfigurer {
                 )
                 .order(2);
         log.info("✅ JWT拦截器注册成功");
+
+        // 注册管理员权限拦截器
+        log.info("🚀 注册管理员权限拦截器...");
+        registry.addInterceptor(adminAuthInterceptor)
+                .addPathPatterns(
+                        "/admin/**",           // 管理员用户管理
+                        "/sign/all-admin/**",  // 管理员为用户签到
+                        "/sign/all-all"        // 一键为所有用户签到
+                )
+                .order(3);
+        log.info("✅ 管理员权限拦截器注册成功");
     }
 }

@@ -40,3 +40,10 @@ logs/
 
 ## 旧文件
 old-index.html
+
+## 配置文件
+.env
+.env.local
+
+## error 记录文件
+error/

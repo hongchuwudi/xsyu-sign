@@ -9,8 +9,11 @@ import java.time.LocalDateTime;
 import java.io.Serializable;
 import java.time.LocalTime;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
@@ -25,6 +28,9 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
 @TableName("user")
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class User implements Serializable {
 
     @Serial private static final long serialVersionUID = 1L;
@@ -71,4 +77,20 @@ public class User implements Serializable {
      * 自动签到
      */
     private Boolean autoSign;
+
+    /**
+     * 签到日期配置（逗号分隔的周几，0=周日，1=周一，...，6=周六）
+     * 默认值："0,1,2,3,4,5,6"（每天签到）
+     */
+    private String signDays;
+
+    /**
+     * 签到开始时间
+     */
+    private LocalTime signStartTime;
+
+    /**
+     * 签到结束时间
+     */
+    private LocalTime signEndTime;
 }

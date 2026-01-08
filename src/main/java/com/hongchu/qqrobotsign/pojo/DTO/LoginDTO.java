@@ -5,18 +5,21 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * 登录请求DTO
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UserDTO {
+public class LoginDTO {
+    /**
+     * 用户名
+     */
     private String username;
-    private String password;
-    private String name;
-    private String email;
-    private Boolean autoSign;
-    private String signDays;
-    private String signStartTime;
-    private String signEndTime;
-}
 
+    /**
+     * RSA加密后的密码
+     */
+    private String psd;
+}

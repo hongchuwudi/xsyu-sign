@@ -16,4 +16,8 @@ public class UserLoginVO {
     String email;
     String jwt;
     private Boolean autoSign;
+    private String signDays;
+    private String role; // 角色：ADMIN 或 USER
+    private String signStartTime;
+    private String signEndTime;
 }

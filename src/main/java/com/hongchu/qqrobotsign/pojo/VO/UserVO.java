@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -15,4 +17,9 @@ public class UserVO {
     String username;
     String email;
     private Boolean autoSign;
+    private Boolean jws;
+    private LocalDateTime updatedAt;
+    private String signDays;
+    private String signStartTime;
+    private String signEndTime;
 }

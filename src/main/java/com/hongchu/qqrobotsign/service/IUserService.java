@@ -18,8 +18,14 @@ public interface IUserService extends IService<User> {
     // 登录(准确来说应该叫注册)
     UserLoginVO register(String username, String password) throws InterruptedException;
 
-    // 移除登录信息
+    // 测试登录 - 测试 XSYULoginUtil
+    String testLogin(String username, String password, String testCode);
+
+    // 移除登录信息（删除数据库）
     String removeLoginInfo();
+
+    // 退出登录（不删除数据库）
+    void logout();
 
     // 续签JWS
     void refreshJws(String username);

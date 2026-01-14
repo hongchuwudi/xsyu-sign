@@ -10,4 +10,7 @@ public interface SignService {
 
     // 处理单个签到
     String processSingleSign(String username, SignItem signItem, SignDTO signDTO);
+
+    // 为所有用户一键签到
+    void AllUserSignAll();
 }

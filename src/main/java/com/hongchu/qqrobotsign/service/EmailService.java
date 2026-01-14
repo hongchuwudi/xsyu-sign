@@ -9,4 +9,7 @@ public interface EmailService {
 
     // 签到结果通知
     void sendSignResultNotice(String to, String username, boolean success, String resultMessage);
+
+    // 发送续签失败通知
+    void sendErrorJwsRefreshMes(String to,String username);
 }

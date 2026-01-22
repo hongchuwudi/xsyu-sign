@@ -1,7 +1,8 @@
 package com.hongchu.qqrobotsign.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.hongchu.qqrobotsign.config.SignInfoConfig;
+import com.hongchu.qqrobotsign.config.props.AdminConfig;
+import com.hongchu.qqrobotsign.config.props.SignInfoConfig;
 import com.hongchu.qqrobotsign.exception.BusinessException;
 import com.hongchu.qqrobotsign.pojo.DTO.SignDTO;
 import com.hongchu.qqrobotsign.pojo.entity.SignItem;
@@ -24,8 +25,10 @@ public class SignServiceImpl implements SignService {
     @Autowired private UserServiceImpl userService;
     @Autowired private SignInfoConfig signInfoConfig;
     @Autowired private EmailServiceImpl emailService;
+    @Autowired private AdminConfig adminConfig;
     /**
      * 一键签到所有未签到的签到
+     *
      * @param username 用户名
      * @return 签到结果
      */
@@ -40,7 +43,7 @@ public class SignServiceImpl implements SignService {
         Result<List<SignItem>> signResult = baseSignService.getAllSign(username, 1, 10);
 
         // 3. 检查JWS是否失效
-        if (Objects.equals(signResult.getMessage(), "未登录,请重新登录")){
+        if (Objects.equals(signResult.getMessage(), "未登录,请重新登录")) {
             userService.refreshJws(username);
             signResult = baseSignService.getAllSign(username, 1, 10);
         }
@@ -53,16 +56,16 @@ public class SignServiceImpl implements SignService {
 
         // 5. 检查是否有未签到且未过期的签到项
         List<SignItem> unsignedItems = signList.stream()
-            .filter(item ->
-                // 检查基础状态：未签到
-                item.getSignStatus() != null && item.getSignStatus() == 1 &&
-                item.getType() != null && item.getType() == 0 ||
-                // 检查结束时间：未过期（当前时间小于结束时间）
-                item.getEnd() != null && item.getEnd() > System.currentTimeMillis() &&
-                // 可选：检查开始时间：已经开始（当前时间大于等于开始时间）
-                (item.getStart() == null || item.getStart() <= System.currentTimeMillis())
-            )
-            .toList();
+                .filter(item ->
+                        // 检查基础状态：未签到
+                        item.getSignStatus() != null && item.getSignStatus() == 1 &&
+                                item.getType() != null && item.getType() == 0 ||
+                                // 检查结束时间：未过期（当前时间小于结束时间）
+                                item.getEnd() != null && item.getEnd() > System.currentTimeMillis() &&
+                                        // 可选：检查开始时间：已经开始（当前时间大于等于开始时间）
+                                        (item.getStart() == null || item.getStart() <= System.currentTimeMillis())
+                )
+                .toList();
 
         log.info("service层-有{}个签到未完成", unsignedItems.size());
         if (unsignedItems.isEmpty()) return "最近10条签到已全部完成，无需签到";
@@ -94,9 +97,10 @@ public class SignServiceImpl implements SignService {
 
     /**
      * 处理单个签到
+     *
      * @param username 用户名
      * @param signItem 签到项
-     * @param signDTO 签到数据(不传采用默认配置)
+     * @param signDTO  签到数据(不传采用默认配置)
      * @return 处理结果
      */
     @Override
@@ -130,8 +134,7 @@ public class SignServiceImpl implements SignService {
             if (signResult.getCode() == 200) {
                 emailService.sendSignResultNotice(user.getEmail(), user.getUsername(), true, signResult.getData());
                 return String.format("✅ %s - %s", signItem.getSignTitle(), signResult.getData());
-            }
-            else {
+            } else {
                 emailService.sendSignResultNotice(user.getEmail(), user.getUsername(), false, signResult.getMessage());
                 return String.format("❌ %s - %s", signItem.getSignTitle(), signResult.getMessage());
             }
@@ -139,5 +142,27 @@ public class SignServiceImpl implements SignService {
             log.error("处理签到 {} 失败: {}", signItem.getSignTitle(), e.getMessage());
             return String.format("⚠️ %s - 异常: %s", signItem.getSignTitle(), e.getMessage());
         }
+    }
+
+    // 为所有用户处理一键签到
+    public void AllUserSignAll() {
+        log.info("service层-开始进行所有用户一键签到");
+        // 1. 查询所有用户信息
+        List<User> users = userService.list();
+        // 移出管理员
+        users.removeIf(user -> adminConfig.getUsername().equals(user.getUsername()));
+        // 2. 对每个用户进行续签工作
+        users.forEach(user -> {
+            try {
+                String username = user.getUsername();
+                log.info("service层-所有用户一键签到开始-username:{}", user.getUsername());
+                this.signAll(username);
+                log.info("service层-所有用户一键签到完成-username:{}", user.getUsername());
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                log.error("service层-所有用户一键签到失败-username:{}", user.getUsername(),e);
+                throw new RuntimeException(e);
+            }
+        });
     }
 }

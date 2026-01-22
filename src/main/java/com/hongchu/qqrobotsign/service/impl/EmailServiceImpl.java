@@ -1,5 +1,6 @@
 package com.hongchu.qqrobotsign.service.impl;
 
+import com.hongchu.qqrobotsign.config.props.AdminConfig;
 import com.hongchu.qqrobotsign.content.EmailContext;
 import com.hongchu.qqrobotsign.exception.BusinessException;
 import com.hongchu.qqrobotsign.service.EmailService;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
+    private final AdminConfig adminConfig;
 
     /**
      * 发送简单文本邮件
@@ -24,10 +26,10 @@ public class EmailServiceImpl implements EmailService {
     public void sendSimpleEmail(String to, String subject, String content) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("油签机 <2772167017@qq.com>");
+            message.setFrom("油签机 <" + adminConfig.getEmail() + ">");
             message.setTo(to);
             message.setSubject(subject);
-            message.setText(content);
+            message.setText(content + EmailContext.EMAIL_SIGNATURE);
             mailSender.send(message);
             log.info("邮件发送成功，收件人：{}", to);
         } catch (Exception e) {
@@ -35,6 +37,7 @@ public class EmailServiceImpl implements EmailService {
             throw new BusinessException("邮箱发送失败");
         }
     }
+
 
     /**
      * 通知用户签到时间安排
@@ -73,5 +76,32 @@ public class EmailServiceImpl implements EmailService {
         }
 
         sendSimpleEmail(to, subject, content);
+    }
+
+    /**
+     * 发送续签失败通知
+     */
+    @Override
+    public void sendErrorJwsRefreshMes(String to,String username) {
+        String content = EmailContext.JWS_REFRESH_ERR_CONTENT.formatted(
+                EmailContext.JWS_REFRESH_SUBJECT,
+                username,
+                LocalDateTime.now(),
+                EmailContext.JWS_REFRESH_SUBJECT,
+                EmailContext.SIGN_FAIL_SUFFIX
+        ) + EmailContext.EMAIL_SIGNATURE;
+        String subject = EmailContext.JWS_REFRESH_SUBJECT;
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("油签机 <" + adminConfig.getEmail() + ">");
+            message.setTo(adminConfig.getEmail());
+            message.setSubject(subject);
+            message.setText(content);
+            mailSender.send(message);
+            log.info("邮件发送成功，收件人：{}", adminConfig.getEmail());
+        } catch (Exception e) {
+            log.error("邮件发送失败，收件人：{}", adminConfig.getEmail(), e);
+            throw new BusinessException("邮箱发送失败");
+        }
     }
 }

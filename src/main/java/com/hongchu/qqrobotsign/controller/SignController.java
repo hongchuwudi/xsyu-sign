@@ -96,6 +96,15 @@ public class SignController {
     }
 
     /**
+     * 一键为所有用户进行签到
+     */
+    @PostMapping("/all-all")
+    public void allSign() {
+        log.info("controller层-一键为所有用户进行签到");
+        signService.AllUserSignAll();
+    }
+
+    /**
      * 处理单个签到
      * @return 签到结果
      */

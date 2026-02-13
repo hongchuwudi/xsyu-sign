@@ -2,325 +2,268 @@ package com.hongchu.qqrobotsign.utils;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class XSYULoginUtil {
 
-    /**
-     * 执行西安石油大学统一认证登录
-     * @param username 学号
-     * @param password 密码
-     * @return jwsession 登录session
-     */
-    public static String login(String username, String password) {
-        Map<String, String> cookies = new HashMap<>();
+    private static final String SERVICE_CAS_LOGIN = "https://gwxg.xsyu.edu.cn/basicinfo/mobile/login/casLogin";
+    private static final String CAS_LOGIN_URL = "https://ids.xsyu.edu.cn/authserver/login";
+    private static final String CAS_HOST = "ids.xsyu.edu.cn";
+    private static final String UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
-        try {
-            // 第一步：访问gwxg系统，获取重定向到统一认证的URL
-            String casLoginUrl = getCasLoginUrl(cookies);
-            if (casLoginUrl == null) {
-                System.out.println("无法获取CAS登录URL");
-                return null;
-            }
-            System.out.println("CAS登录URL: " + casLoginUrl);
-
-            // 第二步：从统一认证系统获取execution参数
-            String execution = getExecutionFromCas(casLoginUrl, cookies);
-            if (execution == null) {
-                System.out.println("无法从CAS获取execution参数");
-                return null;
-            }
-            System.out.println("获取到execution: " + execution);
-
-            // 第三步：向统一认证系统提交登录
-            String ticket = submitCasLogin(username, password, execution, cookies);
-            if (ticket == null) {
-                System.out.println("CAS登录失败");
-                return null;
-            }
-            System.out.println("获取到ticket: " + ticket);
-
-            // 第四步：使用ticket回到gwxg系统获取JWSESSION
-            return getJWSessionWithTicket(ticket, cookies);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+    /** Apply a full set of browser-like headers to minimize server-side captcha triggers. */
+    private static void applyBrowserHeaders(HttpURLConnection conn, String referer) {
+        conn.setRequestProperty("User-Agent", UA);
+        conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+        conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+        conn.setRequestProperty("Accept-Encoding", "identity"); // let us handle it manually
+        conn.setRequestProperty("Connection", "keep-alive");
+        if (referer != null && !referer.isEmpty()) {
+            conn.setRequestProperty("Referer", referer);
         }
     }
 
-    private static String getCasLoginUrl(Map<String, String> cookies) throws IOException {
-        String gwxgUrl = "https://gwxg.xsyu.edu.cn/basicinfo/mobile/login/casLogin";
+    /**
+     * 执行西安石油大学统一认证登录，获取JWSESSION。
+     * CookieManager 管理 domain/path 匹配的 cookie，手动跟随重定向以检测循环。
+     * 失败时重新走完整 CAS 流程（全新 CookieManager），最多3次。
+     */
+    public static String login(String username, String password) {
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            CookieManager cm = new CookieManager();
+            CookieHandler old = CookieHandler.getDefault();
+            CookieHandler.setDefault(cm);
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(gwxgUrl).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setInstanceFollowRedirects(false);
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            try {
+                if (attempt > 1) {
+                    long delay = 3000 + (long)(Math.random() * 2000);
+                    System.out.println("=== 第 " + attempt + " 次重新尝试登录 (等待 " + delay + "ms) ===");
+                    Thread.sleep(delay);
+                }
 
-        processCookies(connection, cookies);
+                String result = doLogin(username, password);
+                if (result != null) {
+                    System.out.println("登录成功! 尝试次数: " + attempt);
+                    return result;
+                }
+                System.out.println("第 " + attempt + " 次尝试失败");
 
-        int responseCode = connection.getResponseCode();
-        System.out.println("初始访问响应码: " + responseCode);
+            } catch (Exception e) {
+                System.out.println("第 " + attempt + " 次尝试异常: " + e.getMessage());
+            } finally {
+                CookieHandler.setDefault(old);
+            }
+        }
+        return null;
+    }
 
-        if (responseCode == 302) {
-            String location = connection.getHeaderField("Location");
+    private static String doLogin(String username, String password) throws IOException, InterruptedException {
+        // 第一步：访问服务端，获取CAS重定向URL
+        String casLoginUrl = getCasLoginUrl();
+        if (casLoginUrl == null) {
+            System.out.println("无法获取CAS登录URL");
+            return null;
+        }
+        System.out.println("CAS登录URL: " + casLoginUrl);
+
+        // 第二步：从CAS登录页提取execution
+        String execution = getExecutionFromCas(casLoginUrl);
+        if (execution == null) {
+            System.out.println("无法从CAS获取execution参数");
+            return null;
+        }
+        System.out.println("获取到execution: " + execution);
+
+        // 短暂延迟，模拟浏览器行为，降低被风控识别概率
+        Thread.sleep(800 + (long)(Math.random() * 400));
+
+        // 第三步：提交CAS登录表单，获取ticket + CASTGC
+        String ticket = submitCasLogin(username, password, execution);
+        if (ticket == null) {
+            System.out.println("CAS登录失败");
+            return null;
+        }
+        System.out.println("获取到ticket: " + ticket);
+
+        // 第四步：用ticket获取JWSESSION（手动跟随重定向链）
+        return getJWSessionWithTicket(ticket);
+    }
+
+    // ==================== 第一步 ====================
+    private static String getCasLoginUrl() throws IOException {
+        HttpURLConnection conn = open(SERVICE_CAS_LOGIN, false);
+        int code = conn.getResponseCode();
+        System.out.println("初始访问响应码: " + code);
+        if (code == 302) {
+            String location = conn.getHeaderField("Location");
             System.out.println("重定向到: " + location);
             return location;
         }
-
         return null;
     }
 
-    private static String getExecutionFromCas(String casUrl, Map<String, String> cookies) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) new URL(casUrl).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-
-        if (!cookies.isEmpty()) {
-            connection.setRequestProperty("Cookie", buildCookieHeader(cookies));
-        }
-
-        processCookies(connection, cookies);
-
-        StringBuilder response = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-        }
-
-        return extractExecution(response.toString());
+    // ==================== 第二步 ====================
+    private static String getExecutionFromCas(String casUrl) throws IOException {
+        HttpURLConnection conn = open(casUrl, false);
+        String html = readBody(conn);
+        return extractExecution(html);
     }
 
-    private static String submitCasLogin(String username, String password, String execution, Map<String, String> cookies) throws IOException {
-        String casLoginUrl = "https://ids.xsyu.edu.cn/authserver/login";
+    // ==================== 第三步 ====================
+    private static String submitCasLogin(String username, String password, String execution) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(CAS_LOGIN_URL).openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setInstanceFollowRedirects(false);
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(15000);
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(casLoginUrl).openConnection();
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
-        connection.setInstanceFollowRedirects(false);
+        // Set browser-like headers to avoid server-side captcha trigger
+        conn.setRequestProperty("User-Agent", UA);
+        conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+        conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        conn.setRequestProperty("Origin", "https://" + CAS_HOST);
+        conn.setRequestProperty("Referer", "https://" + CAS_HOST + "/authserver/login?service=" + URLEncoder.encode(SERVICE_CAS_LOGIN, StandardCharsets.UTF_8));
+        conn.setRequestProperty("Sec-Ch-Ua", "\"Google Chrome\";v=\"125\", \"Chromium\";v=\"125\", \"Not.A/Brand\";v=\"24\"");
+        conn.setRequestProperty("Sec-Ch-Ua-Mobile", "?0");
+        conn.setRequestProperty("Sec-Ch-Ua-Platform", "\"Windows\"");
+        conn.setRequestProperty("Sec-Fetch-Dest", "document");
+        conn.setRequestProperty("Sec-Fetch-Mode", "navigate");
+        conn.setRequestProperty("Sec-Fetch-Site", "same-origin");
+        conn.setRequestProperty("Upgrade-Insecure-Requests", "1");
 
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-
-        if (!cookies.isEmpty()) {
-            connection.setRequestProperty("Cookie", buildCookieHeader(cookies));
-        }
-
-        String serviceUrl = "https://gwxg.xsyu.edu.cn/basicinfo/mobile/login/casLogin";
-        String requestBody = "username=" + URLEncoder.encode(username, "UTF-8") +
-                "&password=" + URLEncoder.encode(password, "UTF-8") +
-                "&execution=" + URLEncoder.encode(execution, "UTF-8") +
+        String body = "username=" + URLEncoder.encode(username, StandardCharsets.UTF_8) +
+                "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8) +
+                "&execution=" + URLEncoder.encode(execution, StandardCharsets.UTF_8) +
                 "&_eventId=submit" +
                 "&loginType=1" +
                 "&rememberMe=true" +
-                "&service=" + URLEncoder.encode(serviceUrl, "UTF-8");
+                "&service=" + URLEncoder.encode(SERVICE_CAS_LOGIN, StandardCharsets.UTF_8);
 
         System.out.println("提交CAS登录请求体");
 
-        try (OutputStream os = connection.getOutputStream()) {
-            os.write(requestBody.getBytes("UTF-8"));
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(body.getBytes(StandardCharsets.UTF_8));
         }
 
-        processCookies(connection, cookies);
+        int code = conn.getResponseCode();
+        System.out.println("CAS登录响应码: " + code);
 
-        int responseCode = connection.getResponseCode();
-        System.out.println("CAS登录响应码: " + responseCode);
-
-        if (responseCode == 302) {
-            String location = connection.getHeaderField("Location");
+        if (code == 302) {
+            String location = conn.getHeaderField("Location");
             System.out.println("CAS登录后重定向到: " + location);
+            return extractTicket(location);
+        }
 
-            if (location != null && location.contains("ticket=")) {
-                String[] parts = location.split("ticket=");
-                if (parts.length > 1) {
-                    String ticket = parts[1];
-                    if (ticket.contains("&")) {
-                        ticket = ticket.split("&")[0];
-                    }
-                    return ticket;
-                }
+        if (code == 200) {
+            String html = readBody(conn);
+            System.out.println("CAS返回200，响应前500字符: " +
+                    html.substring(0, Math.min(500, html.length())));
+
+            if (html.contains("验证码") || html.contains("captcha")) {
+                throw new RuntimeException("登录需要验证码，请手动登录");
+            }
+
+            String ticket = extractTicket(html);
+            if (ticket != null) {
+                System.out.println("从响应页面提取到ticket: " + ticket);
+                return ticket;
             }
         }
 
         return null;
     }
 
-    private static String getJWSessionWithTicket(String ticket, Map<String, String> cookies) throws IOException {
-        // 使用ticket访问gwxg系统
-        String ticketUrl = "https://gwxg.xsyu.edu.cn/basicinfo/mobile/login/casLogin" +
-                "?ticket=" + URLEncoder.encode(ticket, "UTF-8");
-
-        System.out.println("使用ticket访问URL: " + ticketUrl);
-
-        HttpURLConnection connection = (HttpURLConnection) new URL(ticketUrl).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setInstanceFollowRedirects(false);
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-
-        if (!cookies.isEmpty()) {
-            connection.setRequestProperty("Cookie", buildCookieHeader(cookies));
-        }
-
-        int responseCode = connection.getResponseCode();
-        System.out.println("ticket验证响应码: " + responseCode);
-
-        // 处理cookies
-        processCookies(connection, cookies);
-
-        // 检查是否已经获取到JWSESSION
-        if (cookies.containsKey("JWSESSION")) {
-            return cookies.get("JWSESSION");
-        }
-
-        // 如果是重定向，处理重定向链
-        if (responseCode == 302) {
-            String location = connection.getHeaderField("Location");
-            System.out.println("第一次重定向到: " + location);
-
-            // 跟随重定向链，直到获取JWSESSION或重定向结束
-            return followRedirectChain(location, cookies, 0);
-        }
-
-        return null;
+    // ==================== 第四步：手动跟随重定向链 ====================
+    // 不使用 setInstanceFollowRedirects(true)，因为CAS↔service可能形成死循环
+    // 手动跟随可精确检测循环（depth>5 即停止），CookieManager 自动管理cookie
+    private static String getJWSessionWithTicket(String ticket) throws IOException {
+        String url = SERVICE_CAS_LOGIN + "?ticket=" +
+                URLEncoder.encode(ticket, StandardCharsets.UTF_8);
+        System.out.println("使用ticket访问URL: " + url);
+        return followRedirect(url, 0);
     }
 
-    private static String followRedirectChain(String redirectUrl, Map<String, String> cookies, int depth) throws IOException {
+    private static String followRedirect(String url, int depth) throws IOException {
         if (depth > 5) {
-            System.out.println("重定向链过长，停止跟随");
+            System.out.println("重定向链过长(" + depth + "次)，停止跟随");
             return null;
         }
 
-        System.out.println("跟随重定向 [" + depth + "]: " + redirectUrl);
+        System.out.println((depth == 0 ? "访问" : "跟随重定向[" + depth + "]") + ": " + url);
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(redirectUrl).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setInstanceFollowRedirects(false);
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+        HttpURLConnection conn = open(url, false);
+        int code = conn.getResponseCode();
 
-        if (!cookies.isEmpty()) {
-            connection.setRequestProperty("Cookie", buildCookieHeader(cookies));
-        }
-
-        processCookies(connection, cookies);
-
-        // 检查是否获取到JWSESSION
-        if (cookies.containsKey("JWSESSION")) {
+        // CookieManager 已自动解析 Set-Cookie 并存入 cookie store
+        // 检查是否已拿到 JWSESSION
+        String jws = findJWSession();
+        if (jws != null) {
             System.out.println("成功获取JWSESSION!");
-            return cookies.get("JWSESSION");
+            return jws;
         }
 
-        int responseCode = connection.getResponseCode();
-        System.out.println("重定向响应码 [" + depth + "]: " + responseCode);
+        System.out.println("响应码[" + depth + "]: " + code);
 
-        // 打印所有响应头用于调试
-        Map<String, List<String>> headers = connection.getHeaderFields();
-        for (Map.Entry<String, List<String>> header : headers.entrySet()) {
-            if (header.getKey() != null) {
-                System.out.println(header.getKey() + ": " + header.getValue());
-            }
-        }
-
-        if (responseCode == 302) {
-            String nextLocation = connection.getHeaderField("Location");
-            if (nextLocation != null) {
-                return followRedirectChain(nextLocation, cookies, depth + 1);
-            }
-        } else if (responseCode == 200) {
-            // 如果是200响应，可能已经到达目标页面，检查cookies
-            System.out.println("到达目标页面，检查cookies...");
-            if (cookies.containsKey("JWSESSION")) {
-                return cookies.get("JWSESSION");
-            }
-
-            // 如果没有JWSESSION，尝试访问首页获取
-            return tryAccessHomePage(cookies);
+        if (code == 302) {
+            String location = conn.getHeaderField("Location");
+            if (location != null) return followRedirect(location, depth + 1);
         }
 
         return null;
     }
 
-    private static String tryAccessHomePage(Map<String, String> cookies) throws IOException {
-        // 尝试访问gwxg系统的首页来获取JWSESSION
-        String homeUrl = "https://gwxg.xsyu.edu.cn/h5/mobile/basicinfo/index";
+    // ==================== 工具方法 ====================
 
-        System.out.println("尝试访问首页: " + homeUrl);
+    private static HttpURLConnection open(String url, boolean followRedirects) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setRequestMethod("GET");
+        conn.setInstanceFollowRedirects(followRedirects);
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(15000);
+        applyBrowserHeaders(conn, url.contains("authserver") ? null : "https://" + CAS_HOST + "/");
+        return conn;
+    }
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(homeUrl).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-
-        if (!cookies.isEmpty()) {
-            connection.setRequestProperty("Cookie", buildCookieHeader(cookies));
+    private static String readBody(HttpURLConnection conn) throws IOException {
+        try (BufferedReader r = new BufferedReader(
+                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = r.readLine()) != null) sb.append(line);
+            return sb.toString();
         }
+    }
 
-        processCookies(connection, cookies);
-
-        if (cookies.containsKey("JWSESSION")) {
-            System.out.println("通过首页获取到JWSESSION!");
-            return cookies.get("JWSESSION");
+    private static String findJWSession() {
+        CookieManager cm = (CookieManager) CookieHandler.getDefault();
+        if (cm == null) return null;
+        for (HttpCookie c : cm.getCookieStore().getCookies()) {
+            if ("JWSESSION".equals(c.getName()) && c.getValue() != null && !c.getValue().isEmpty())
+                return c.getValue();
         }
+        return null;
+    }
 
+    private static String extractTicket(String text) {
+        if (text == null) return null;
+        Matcher m = Pattern.compile("ticket=([^\"&\\s]+)").matcher(text);
+        if (m.find()) return m.group(1);
         return null;
     }
 
     private static String extractExecution(String html) {
-        String[] patterns = {
-                "name=\"execution\" value=\"([^\"]+)\"",
-                "execution\" value=\"([^\"]+)\""
-        };
-
-        for (String pattern : patterns) {
-            java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
-            java.util.regex.Matcher m = p.matcher(html);
-            if (m.find()) {
-                return m.group(1);
-            }
-        }
+        Matcher m = Pattern.compile("name=\"execution\" value=\"([^\"]+)\"").matcher(html);
+        if (m.find()) return m.group(1);
+        m = Pattern.compile("execution\" value=\"([^\"]+)\"").matcher(html);
+        if (m.find()) return m.group(1);
         return null;
     }
 
-    private static void processCookies(HttpURLConnection connection, Map<String, String> cookies) {
-        Map<String, List<String>> headers = connection.getHeaderFields();
-        for (Map.Entry<String, List<String>> header : headers.entrySet()) {
-            if ("Set-Cookie".equalsIgnoreCase(header.getKey())) {
-                for (String cookie : header.getValue()) {
-                    System.out.println("收到Cookie: " + cookie);
-                    parseCookie(cookie, cookies);
-                }
-            }
-        }
-
-        // 打印当前所有cookies
-        System.out.println("当前cookies: " + cookies.keySet());
-    }
-
-    private static void parseCookie(String cookieHeader, Map<String, String> cookies) {
-        String[] cookiePairs = cookieHeader.split(";");
-        for (String cookiePair : cookiePairs) {
-            String[] parts = cookiePair.split("=", 2);
-            if (parts.length == 2) {
-                String key = parts[0].trim();
-                String value = parts[1].trim();
-                cookies.put(key, value);
-                System.out.println("保存Cookie: " + key + "=" + value);
-            }
-        }
-    }
-
-    private static String buildCookieHeader(Map<String, String> cookies) {
-        StringBuilder header = new StringBuilder();
-        for (Map.Entry<String, String> entry : cookies.entrySet()) {
-            if (header.length() > 0) {
-                header.append("; ");
-            }
-            header.append(entry.getKey()).append("=").append(entry.getValue());
-        }
-        return header.toString();
-    }
-
-    // 测试
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         System.out.print("请输入学号：");

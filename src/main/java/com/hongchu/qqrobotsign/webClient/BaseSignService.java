@@ -2,8 +2,8 @@ package com.hongchu.qqrobotsign.webClient;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hongchu.qqrobotsign.config.SignInfoConfig;
-import com.hongchu.qqrobotsign.config.UrlConfig;
+import com.hongchu.qqrobotsign.config.props.SignInfoConfig;
+import com.hongchu.qqrobotsign.config.props.UrlConfig;
 import com.hongchu.qqrobotsign.exception.BusinessException;
 import com.hongchu.qqrobotsign.pojo.DTO.SignDTO;
 import com.hongchu.qqrobotsign.pojo.entity.SignItem;

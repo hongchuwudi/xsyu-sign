@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 11451
 
 spring:
@@ -6,12 +6,12 @@ spring:
       name: qq-robot-service
   # 配置文件
   profiles:
-    active: dev      # 配置环境
+    active: prod
     include: signInfo # 包含文件
   #数据库
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${hc.datasource.host}:${hc.datasource.port}/${hc.datasource.db}?serverTimezone=Asia/Shanghai&useSSL=false&useUnicode=true&characterEncoding=utf8
+    url: jdbc:mysql://${hc.datasource.host}:${hc.datasource.port}/${hc.datasource.db}?serverTimezone=Asia/Shanghai&useSSL=false&useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true
     username: ${hc.datasource.username}
     password: ${hc.datasource.password}
   #redis
@@ -55,6 +55,5 @@ my-jwt:
   secret-key: ${hc.jwt.secret-key}
   ttl: ${hc.jwt.ttl}
   token-name: ${hc.jwt.token-name}
-
 
 

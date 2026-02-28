@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="油签机系统 - 西安石油大学校园签到辅助工具，支持自动签到和手动签到">
     <title>油签机系统</title>
 
     <!-- Vue 2 -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
 
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/utils/tailwind.3.4.17.min.js"></script>
 
     <!-- Axios -->
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
@@ -17,11 +18,18 @@
     <!-- CryptoJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
+    <!-- JSEncrypt (RSA加密) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- highlight.js 代码高亮 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
     <style>
-        /* 最简单的模态框样式 */
+        /* 模态框样式 */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -49,12 +57,10 @@
             z-index: 1001;
         }
 
-        /* 确保app内容正常显示 */
         #app {
             min-height: 100vh;
         }
 
-        /* 多行文本截断 */
         .line-clamp-2 {
             overflow: hidden;
             display: -webkit-box;
@@ -65,665 +71,145 @@
 </head>
 <body class="bg-gray-50">
 <div id="app">
-    <!-- 登录界面 -->
-    <div v-if="!isLoggedIn" class="flex items-center justify-center min-h-screen p-4">
-        <div class="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-user-graduate text-white text-2xl"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">校园签到系统</h2>
-                <p class="text-gray-600 mt-2">请使用学号和密码登录</p>
-            </div>
-
-            <form @submit.prevent="login" class="space-y-4">
-                <div>
-                    <label class="block text-gray-700 text-sm font-medium mb-2">学号/用户名</label>
-                    <input v-model="loginForm.username" type="text" required placeholder="请输入学号"
-                           class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors">
-                </div>
-
-                <div>
-                    <label class="block text-gray-700 text-sm font-medium mb-2">密码</label>
-                    <input v-model="loginForm.password" type="password" required placeholder="请输入密码"
-                           class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors">
-                </div>
-
-                <button type="submit" :disabled="isLoading"
-                        class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span v-if="isLoading">
-                            <i class="fas fa-spinner fa-spin mr-2"></i>登录中...
-                        </span>
-                    <span v-else>登录</span>
-                </button>
-
-                <div v-if="error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                    <i class="fas fa-exclamation-circle mr-2"></i>{{ error }}
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- 登录页面 -->
+    <login-page v-if="!isLoggedIn"
+                :is-loading="isLoading"
+                :error="error"
+                @login="handleLogin">
+    </login-page>
 
     <!-- 主界面 -->
-    <div v-else class="min-h-screen flex flex-col">
-        <!-- 顶部导航 -->
-        <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
-            <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between py-3">
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-calendar-check text-blue-500 text-xl"></i>
-                        <h1 class="text-lg font-semibold text-gray-800">签到系统</h1>
-                    </div>
+    <div v-else class="min-h-screen flex flex-col pb-14">
+        <!-- 首页 -->
+        <home-page v-if="currentPage === 'home'"></home-page>
 
-                    <div class="flex items-center space-x-3">
-                        <!-- 用户信息 -->
-                        <div class="hidden sm:flex items-center space-x-2">
-                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <i class="fas fa-user text-blue-500 text-sm"></i>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700">{{ userInfo.name || userInfo.username
-                                }}</span>
-                        </div>
+        <!-- 用户签到页面 -->
+        <template v-else-if="currentPage === 'user'">
+            <!-- 顶部导航 -->
+            <header-nav :user-info="userInfo"
+                        :show-user-menu="showUserMenu"
+                        @toggle-menu="toggleUserMenu"
+                        @edit-profile="openEditProfile"
+                        @toggle-auto-sign="handleToggleAutoSign"
+                        @open-about="openAbout"
+                        @logout="handleLogout"
+                        @unregister-confirm="showUnregisterConfirm">
+            </header-nav>
 
-                        <!-- 菜单按钮 -->
-                        <div class="relative">
-                            <button @click="toggleUserMenu"
-                                    class="p-2 rounded-lg hover:bg-gray-100">
-                                <i class="fas fa-ellipsis-v text-gray-600"></i>
-                            </button>
+            <!-- 主要内容 -->
+            <main class="flex-1 container mx-auto px-4 py-6">
+                <sign-list :signs="signs"
+                           :is-loading="isLoading"
+                           :current-page="signCurrentPage"
+                           :total-pages="totalPages"
+                           :pending-count="pendingCount"
+                           @refresh="getAllSigns"
+                           @one-key-sign="handleOneKeySign"
+                           @view-detail="openSignDetail"
+                           @sign-single="handleSignSingle"
+                           @prev-page="prevPage"
+                           @next-page="nextPage">
+                </sign-list>
+            </main>
+        </template>
 
-                            <!-- 用户菜单 -->
-                            <div v-if="showUserMenu"
-                                 class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
-                                <button @click="openEditProfile"
-                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                                    <i class="fas fa-user-edit mr-2 text-gray-500"></i>修改个人信息
-                                </button>
-                                <button @click="toggleAutoSign"
-                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                                    <i class="fas fa-robot mr-2 text-gray-500"></i>
-                                    自动签到: {{ userInfo.autoSign ? '关闭' : '开启' }}
-                                </button>
-                                <button @click="openAbout"
-                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                                    <i class="fas fa-info-circle mr-2 text-blue-500"></i>关于软件
-                                </button>
-                                <div class="border-t border-gray-200 my-1"></div>
-                                <button @click="showLogoutConfirm"
-                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
-                                    <i class="fas fa-sign-out-alt mr-2"></i>注销信息
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <!-- 管理员页面 -->
+        <admin-page v-else-if="currentPage === 'admin'"
+                    :is-loading="isLoading"
+                    :users="users"
+                    :total="total"
+                    :stats="adminStats"
+                    :current-page="adminCurrentPage"
+                    @logout="handleLogout"
+                    @refresh-users="getAllUsers"
+                    @delete-user="handleDeleteUser"
+                    @refresh-jws="handleRefreshUserJws"
+                    @edit-user="handleEditUser"
+                    @change-page="handleAdminPageChange"
+                    @change-filter="handleAdminFilterChange"
+                    @get-user-detail="handleGetUserDetail"
+                    @get-user-signs="handleGetUserSigns"
+                    @search="handleAdminSearch"
+                    @toggle-auto-sign="handleToggleUserAutoSign"
+                    @add-user="handleAddUser"
+                    @sign-user="handleSignUser"
+                    @sign-all-users="handleSignAllUsers"
+                    @go-to-task-config="switchToTaskConfigPage"
+                    @go-to-redis-queue="switchToRedisQueuePage"
+                    @go-to-announcements="switchToAnnouncementPage">
+        </admin-page>
 
-        <!-- 主要内容 -->
-        <main class="flex-1 container mx-auto px-4 py-6">
-            <!-- 操作栏 -->
-            <div class="mb-6 space-y-4">
-                <div class="flex flex-wrap items-center gap-3">
-                    <button @click="getAllSigns(1)" :disabled="isLoading"
-                            class="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center">
-                        <i class="fas fa-sync-alt mr-2" :class="{'fa-spin': isLoading}"></i>刷新列表
-                    </button>
+        <!-- 定时任务配置页面 -->
+        <task-config-page v-else-if="currentPage === 'task-config'"
+                          :is-loading="isLoading"
+                          :task-configs="taskConfigs"
+                          @logout="handleLogout"
+                          @refresh-task-configs="getTaskConfigs"
+                          @update-task-config="handleUpdateTaskConfig"
+                          @immediate-schedule="handleImmediateSchedule"
+                          @back-to-admin="switchToAdminPage"
+                          @go-to-users="switchToAdminPage"
+                          @go-to-redis-queue="switchToRedisQueuePage"
+                          @go-to-announcements="switchToAnnouncementPage">
+        </task-config-page>
 
-                    <button @click="oneKeySign" :disabled="isLoading || pendingCount === 0"
-                            :class="pendingCount === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-500 hover:opacity-90'"
-                            class="text-white px-4 py-2 rounded-lg font-medium transition-opacity flex items-center">
-                        <i class="fas fa-bolt mr-2"></i>一键签到
-                        <span v-if="pendingCount > 0"
-                              class="ml-2 bg-white text-green-600 text-xs px-2 py-0.5 rounded-full">
-                                {{ pendingCount }}
-                            </span>
-                    </button>
+        <!-- Redis 队列页面 -->
+        <redis-queue-page v-else-if="currentPage === 'redis-queue'"
+                            :is-loading="isLoading"
+                            @logout="handleLogout"
+                            @show-message="showMessage"
+                            @loading-start="startLoading"
+                            @loading-end="endLoading"
+                            @go-to-users="switchToAdminPage"
+                            @go-to-task-config="switchToTaskConfigPage"
+                          @go-to-announcements="switchToAnnouncementPage">
+        </redis-queue-page>
 
-                    <div class="flex-1 min-w-[200px]">
-                        <div class="relative">
-                            <input v-model="searchQuery" type="text" placeholder="搜索签到标题、内容..."
-                                   class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none">
-                            <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
-                        </div>
-                    </div>
-                </div>
+        <!-- 用户端底部导航 -->
+        <bottom-nav v-if="currentPage==='home' || currentPage==='user'"
+                    :current-page="currentPage"
+                    @go-home="switchToHomePage"
+                    @go-signs="switchToUserPage">
+        </bottom-nav>
 
-                <!-- 状态筛选 -->
-                <div class="flex flex-wrap gap-2">
-                    <button @click="filterStatus = null"
-                            :class="filterStatus === null ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-                        全部
-                    </button>
-                    <button @click="filterStatus = '待签到'"
-                            :class="filterStatus === '待签到' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-700'"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center">
-                        <i class="fas fa-clock mr-1"></i>待签到
-                    </button>
-                    <button @click="filterStatus = '已签到'"
-                            :class="filterStatus === '已签到' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'"
-                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center">
-                        <i class="fas fa-check mr-1"></i>已签到
-                    </button>
-                </div>
-            </div>
-
-            <!-- 签到列表 -->
-            <div v-if="isLoading && signs.length === 0" class="flex justify-center items-center py-20">
-                <div class="text-center">
-                    <i class="fas fa-spinner fa-spin text-blue-500 text-3xl mb-4"></i>
-                    <p class="text-gray-600">加载中...</p>
-                </div>
-            </div>
-
-            <div v-else-if="filteredSigns.length === 0" class="text-center py-20">
-                <i class="fas fa-inbox text-gray-300 text-4xl mb-4"></i>
-                <p class="text-gray-500 mb-2">暂无签到记录</p>
-                <button @click="getAllSigns(1)" class="text-blue-500 hover:text-blue-600 text-sm">
-                    <i class="fas fa-redo mr-1"></i>刷新试试
-                </button>
-            </div>
-
-            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <!-- 签到卡片 -->
-                <div v-for="sign in filteredSigns" :key="sign.id"
-                     class="bg-white rounded-xl border border-gray-200 p-4 shadow hover:shadow-md transition-shadow">
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex-1 mr-2">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="font-semibold text-gray-800 text-sm truncate">{{ sign.signTitle || '未命名签到'
-                                    }}</span>
-                                <span v-if="sign.isRead === 1"
-                                      class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">已读</span>
-                            </div>
-                            <p v-if="sign.signContext" class="text-gray-600 text-sm line-clamp-2">{{ sign.signContext
-                                }}</p>
-                        </div>
-
-                        <span :class="getSignStatusClass(sign)"
-                              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium">
-                                {{ getSignStatusDesc(sign) }}
-                        </span>
-                    </div>
-
-                    <!-- 课程信息 -->
-                    <div class="flex items-center text-sm text-gray-500 mb-3">
-                        <i class="fas fa-graduation-cap mr-2"></i>
-                        <span>{{ sign.college || '未设置学院' }}</span>
-                        <span v-if="sign.major" class="mx-1">·</span>
-                        <span>{{ sign.major || '' }}</span>
-                    </div>
-
-                    <!-- 时间和位置 -->
-                    <div class="space-y-2 text-sm">
-                        <div class="flex items-center text-gray-600">
-                            <i class="fas fa-clock mr-2 w-4"></i>
-                            <span>{{ formatTime(sign.start) }} - {{ formatTime(sign.end) }}</span>
-                            <span class="mx-2">|</span>
-                            <span>{{ sign.signDay || formatDate(sign.start) }}</span>
-                        </div>
-
-                        <div v-if="sign.area" class="flex items-center text-gray-600">
-                            <i class="fas fa-map-marker-alt mr-2 w-4"></i>
-                            <span class="truncate">{{ sign.area }}</span>
-                        </div>
-
-                        <div v-if="sign.createName" class="flex items-center text-gray-600">
-                            <i class="fas fa-user-tie mr-2 w-4"></i>
-                            <span>创建: {{ sign.createName }}</span>
-                            <span v-if="sign.teacher" class="ml-2">({{ sign.teacher }})</span>
-                        </div>
-                    </div>
-
-                    <!-- 操作按钮 -->
-                    <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
-                        <button @click="openSignDetail(sign)"
-                                class="text-blue-500 hover:text-blue-600 text-sm font-medium flex items-center">
-                            <i class="fas fa-eye mr-1"></i>查看详情
-                        </button>
-
-                        <button v-if="isValidSign(sign)" @click="signSingle(sign)" :disabled="isLoading"
-                                class="bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center">
-                            <i class="fas fa-check mr-1"></i>立即签到
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 分页 -->
-            <div v-if="totalPages > 1" class="mt-6 flex justify-center">
-                <div class="flex items-center gap-2 bg-white rounded-lg shadow-sm p-2">
-                    <button @click="prevPage" :disabled="currentPage === 1"
-                            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-
-                    <span class="text-sm text-gray-600 px-2">第 {{ currentPage }} 页 / 共 {{ totalPages }} 页</span>
-
-                    <button @click="nextPage" :disabled="currentPage === totalPages"
-                            class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 disabled:opacity-50">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-        </main>
+        <!-- 公告管理页面 -->
+        <announcement-page v-else-if="currentPage === 'announcements'"
+                           :is-loading="isLoading"
+                           @logout="handleLogout"
+                           @go-to-users="switchToAdminPage"
+                           @go-to-task-config="switchToTaskConfigPage"
+                           @go-to-redis-queue="switchToRedisQueuePage">
+        </announcement-page>
     </div>
 
     <!-- 签到详情模态框 -->
-    <div :class="{'active': showDetailModal}" class="modal-overlay">
-        <div class="modal-box w-full max-w-2xl mx-4">
-            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
-                <div class="flex justify-between items-start">
-                    <div class="pr-4">
-                        <h3 class="text-xl font-bold">{{ selectedSign.signTitle || '签到详情' }}</h3>
-                        <p class="text-blue-100 text-sm mt-1">{{ selectedSign.signContext || '无详细内容' }}</p>
-                    </div>
-                    <button @click="closeDetailModal" class="text-white hover:text-blue-200 text-xl">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
+    <sign-detail-modal :visible="showDetailModal"
+                       :sign="selectedSign"
+                       @close="closeSignDetail"
+                       @sign="handleSignSingle">
+    </sign-detail-modal>
 
-            <div class="p-6 max-h-[60vh] overflow-y-auto">
-                <div class="space-y-6">
-                    <!-- 基本信息 -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm text-gray-500 mb-1">签到状态</p>
-                            <span :class="getSignStatusClass(selectedSign)"
-                                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium">
-                                     {{ getSignStatusDesc(selectedSign) }}
-                            </span>
-                        </div>
-
-                        <div>
-                            <p class="text-sm text-gray-500 mb-1">签到时间</p>
-                            <p class="font-medium">{{ formatDateTime(selectedSign.start) }} -
-                                {{ formatDateTime(selectedSign.end) }}</p>
-                        </div>
-
-                        <div>
-                            <p class="text-sm text-gray-500 mb-1">签到日期</p>
-                            <p class="font-medium">{{ selectedSign.signDay || formatDate(selectedSign.start) }}</p>
-                        </div>
-
-                        <div v-if="selectedSign.area">
-                            <p class="text-sm text-gray-500 mb-1">签到地点</p>
-                            <p class="font-medium">{{ selectedSign.area }}</p>
-                        </div>
-                    </div>
-
-                    <!-- 用户信息 -->
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <h4 class="font-medium text-gray-800 mb-3 flex items-center">
-                            <i class="fas fa-user-graduate text-blue-500 mr-2"></i>用户信息
-                        </h4>
-                        <div class="grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                                <p class="text-gray-500">姓名</p>
-                                <p class="font-medium">{{ selectedSign.name || '未设置' }}</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">学号</p>
-                                <p class="font-medium">{{ selectedSign.number || '未设置' }}</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">学院</p>
-                                <p class="font-medium">{{ selectedSign.college || '未设置' }}</p>
-                            </div>
-                            <div>
-                                <p class="text-gray-500">专业</p>
-                                <p class="font-medium">{{ selectedSign.major || '未设置' }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 创建者信息 -->
-                    <div v-if="selectedSign.createName" class="bg-gray-50 rounded-lg p-4">
-                        <h4 class="font-medium text-gray-800 mb-3 flex items-center">
-                            <i class="fas fa-chalkboard-teacher text-purple-500 mr-2"></i>创建者信息
-                        </h4>
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                <i class="fas fa-user-tie text-blue-500"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium">{{ selectedSign.createName }}</p>
-                                <p class="text-sm text-gray-500">{{ selectedSign.createCollege || '' }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="border-t border-gray-200 p-6">
-                <div class="flex justify-end gap-3">
-                    <button @click="closeDetailModal"
-                            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                        关闭
-                    </button>
-                    <button v-if="isValidSign(selectedSign)" @click="signSingle(selectedSign)"
-                            class="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center">
-                        <i class="fas fa-check mr-2"></i>立即签到
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 修改个人信息模态框 -->
-    <div :class="{'active': showEditProfileModal}" class="modal-overlay">
-        <div class="modal-box w-full max-w-md mx-4">
-            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-t-lg">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold">修改个人信息</h3>
-                    <button @click="closeEditModal" class="text-white hover:text-blue-200 text-xl">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="p-6">
-                <form @submit.prevent="updateUserInfo" class="space-y-4">
-                    <div>
-                        <label class="block text-gray-700 text-sm font-medium mb-2">姓名</label>
-                        <input v-model="editForm.name" type="text"
-                               class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors">
-                    </div>
-
-                    <div>
-                        <label class="block text-gray-700 text-sm font-medium mb-2">邮箱</label>
-                        <input v-model="editForm.email" type="email"
-                               class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors">
-                    </div>
-
-                    <div class="pt-4">
-                        <button type="submit" :disabled="isUpdating"
-                                class="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
-                                <span v-if="isUpdating">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i>保存中...
-                                </span>
-                            <span v-else>保存修改</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <!-- 个人资料编辑模态框 -->
+    <user-profile-modal :visible="showEditProfileModal"
+                        :user-info="userInfo"
+                        @close="closeEditProfile"
+                        @save="handleUpdateUserInfo">
+    </user-profile-modal>
 
     <!-- 关于软件模态框 -->
-    <div :class="{'active': showAboutModal}" class="modal-overlay">
-        <div class="modal-box w-full max-w-4xl mx-4">
-            <!-- 修改顶部：使用系统风格 -->
-            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-t-lg">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold flex items-center">
-                        <i class="fas fa-info-circle mr-2"></i>关于软件
-                    </h3>
-                    <button @click="closeAboutModal" class="text-white hover:text-blue-200 text-xl">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
+    <about-modal :visible="showAboutModal"
+                 @close="closeAbout">
+    </about-modal>
 
-            <div class="p-6" style="max-height: 70vh; overflow-y: auto;">
-                <div class="space-y-6">
-                    <!-- 修改作者信息：简洁样式 -->
-                    <div class="bg-white rounded-lg p-6 border border-gray-200">
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <div class="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-code text-white text-xl"></i>
-                                </div>
-                            </div>
-                            <div class="ml-4 flex-1">
-                                <h4 class="font-bold text-gray-800 mb-2 text-lg">作者信息</h4>
-                                <div class="space-y-2">
-                                    <p class="text-gray-700">
-                                        <span class="font-medium">虹初 (hongchu)</span> - 作者承诺绝对对用户信息保密,信息严格加密
-                                    </p>
-                                    <p class="text-gray-600 text-sm">
-                                        <i class="fab fa-qq text-blue-500 mr-1"></i> QQ: 2772167017
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 修改项目链接：防止溢出 -->
-                    <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                        <h4 class="font-bold text-gray-800 mb-4 text-lg">相关链接</h4>
-                        <div class="space-y-3">
-                            <a href="https://bgithub.xyz/hongchuwudi" target="_blank"
-                               class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow transition-all group">
-                                <i class="fas fa-home text-blue-500 mr-3 text-lg"></i>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-800 truncate">项目主页</p>
-                                    <p class="text-sm text-gray-500 truncate group-hover:text-blue-600">bgithub.xyz/hongchuwudi</p>
-                                </div>
-                                <i class="fas fa-external-link-alt text-gray-400 ml-2"></i>
-                            </a>
-
-                            <a href="https://github.com/hongchuwudi/xsyu-sign" target="_blank"
-                               class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow transition-all group">
-                                <i class="fab fa-github text-gray-800 mr-3 text-lg"></i>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-800 truncate">项目仓库</p>
-                                    <p class="text-sm text-gray-500 truncate group-hover:text-gray-700">github.com/hongchuwudi/xsyu-sign</p>
-                                </div>
-                                <i class="fas fa-external-link-alt text-gray-400 ml-2"></i>
-                            </a>
-
-                            <a href="https://www.xsyu.edu.cn/" target="_blank"
-                               class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-red-300 hover:shadow transition-all group">
-                                <i class="fas fa-university text-red-500 mr-3 text-lg"></i>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-800 truncate">学校官网</p>
-                                    <p class="text-sm text-gray-500 truncate group-hover:text-red-600">www.xsyu.edu.cn</p>
-                                </div>
-                                <i class="fas fa-external-link-alt text-gray-400 ml-2"></i>
-                            </a>
-
-                            <!-- 修改油学通链接：添加换行处理 -->
-                            <a href="https://gwxg.xsyu.edu.cn/h5/mobile/sign/index/message" target="_blank"
-                               class="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-green-300 hover:shadow transition-all group">
-                                <i class="fas fa-sign-in-alt text-green-500 mr-3 text-lg"></i>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-medium text-gray-800">油学通签到模块</p>
-                                    <p class="text-sm text-gray-500 break-words group-hover:text-green-600">
-                                        gwxg.xsyu.edu.cn/h5/mobile/sign/index/message
-                                    </p>
-                                </div>
-                                <i class="fas fa-external-link-alt text-gray-400 ml-2"></i>
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- 工作流程 -->
-                    <div class="bg-white rounded-lg p-6 border border-gray-200">
-                        <h4 class="font-bold text-gray-800 mb-4 text-lg">系统工作流程</h4>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <!-- SVG流程图 -->
-                            <svg class="w-full h-80" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
-                                <!-- 主流程线 -->
-                                <path d="M 100,100 L 200,100 L 200,200 L 300,200 L 300,100 L 400,100 L 400,200"
-                                      stroke="#06b6d4" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
-
-                                <!-- 分支线 - 自动模式 -->
-                                <path d="M 400,200 L 400,250 L 250,250 L 250,350"
-                                      stroke="#10b981" stroke-width="4" fill="none" marker-end="url(#arrowhead-green)"/>
-
-                                <!-- 分支线 - 手动模式 -->
-                                <path d="M 400,200 L 400,250 L 550,250 L 550,350"
-                                      stroke="#3b82f6" stroke-width="4" fill="none" marker-end="url(#arrowhead-blue)"/>
-
-                                <!-- 手动模式子流程1: 一键签到 -->
-                                <path d="M 550,350 L 550,400 L 450,400 L 450,500"
-                                      stroke="#3b82f6" stroke-width="3" fill="none" marker-end="url(#arrowhead-blue)"/>
-
-                                <!-- 手动模式子流程2: 精准签到 -->
-                                <path d="M 550,350 L 550,400 L 650,400 L 650,500 L 800,500"
-                                      stroke="#3b82f6" stroke-width="3" fill="none" marker-end="url(#arrowhead-blue)"/>
-                                <path d="M 800,500 L 800,400 L 900,400 L 900,350"
-                                      stroke="#3b82f6" stroke-width="3" fill="none" marker-end="url(#arrowhead-blue)"/>
-
-                                <!-- 退出流程线 -->
-                                <path d="M 400,100 L 600,100 L 600,150 L 900,150"
-                                      stroke="#ef4444" stroke-width="4" fill="none" marker-end="url(#arrowhead-red)"/>
-
-                                <!-- 步骤1: 用户登录 -->
-                                <circle cx="100" cy="100" r="40" fill="#06b6d4" stroke="#0891b2" stroke-width="3"/>
-                                <text x="100" y="100" text-anchor="middle" fill="white" font-weight="bold" font-size="24" dy="8">1</text>
-                                <text x="100" y="160" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">用户登录</text>
-
-                                <!-- 步骤2: 更新信息 -->
-                                <circle cx="300" cy="100" r="40" fill="#06b6d4" stroke="#0891b2" stroke-width="3"/>
-                                <text x="300" y="100" text-anchor="middle" fill="white" font-weight="bold" font-size="24" dy="8">2</text>
-                                <text x="300" y="160" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">更新信息</text>
-
-                                <!-- 步骤3: 选择模式 -->
-                                <circle cx="400" cy="200" r="40" fill="#f59e0b" stroke="#d97706" stroke-width="3"/>
-                                <text x="400" y="200" text-anchor="middle" fill="white" font-weight="bold" font-size="24" dy="8">3</text>
-                                <text x="400" y="260" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">选择模式</text>
-
-                                <!-- 自动模式 -->
-                                <circle cx="250" cy="350" r="40" fill="#10b981" stroke="#059669" stroke-width="3"/>
-                                <text x="250" y="350" text-anchor="middle" fill="white" font-weight="bold" font-size="22" dy="8">A</text>
-                                <text x="250" y="410" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">自动模式</text>
-                                <text x="250" y="440" text-anchor="middle" fill="#64748b" font-size="26">设置自动签到</text>
-
-                                <!-- 手动模式 -->
-                                <circle cx="550" cy="350" r="40" fill="#3b82f6" stroke="#2563eb" stroke-width="3"/>
-                                <text x="550" y="350" text-anchor="middle" fill="white" font-weight="bold" font-size="22" dy="8">M</text>
-                                <text x="550" y="410" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">手动模式</text>
-                                <text x="550" y="440" text-anchor="middle" fill="#64748b" font-size="26">手动管理</text>
-
-                                <!-- 手动子流程1: 一键签到 -->
-                                <circle cx="450" cy="500" r="40" fill="#60a5fa" stroke="#3b82f6" stroke-width="3"/>
-                                <text x="450" y="500" text-anchor="middle" fill="white" font-weight="bold" font-size="20" dy="8">1.1</text>
-                                <text x="450" y="560" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">一键签到</text>
-                                <text x="450" y="590" text-anchor="middle" fill="#64748b" font-size="26">完成所有签到</text>
-
-                                <!-- 手动子流程2: 获取信息 -->
-                                <circle cx="650" cy="500" r="40" fill="#93c5fd" stroke="#3b82f6" stroke-width="3"/>
-                                <text x="650" y="500" text-anchor="middle" fill="white" font-weight="bold" font-size="20" dy="8">2.1</text>
-                                <text x="650" y="560" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">获取信息</text>
-                                <text x="650" y="590" text-anchor="middle" fill="#64748b" font-size="26">获取id和signId</text>
-
-                                <!-- 手动子流程3: 精准签到 -->
-                                <circle cx="900" cy="350" r="40" fill="#60a5fa" stroke="#3b82f6" stroke-width="3"/>
-                                <text x="900" y="350" text-anchor="middle" fill="white" font-weight="bold" font-size="20" dy="8">2.2</text>
-                                <text x="900" y="410" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">精准签到</text>
-                                <text x="900" y="440" text-anchor="middle" fill="#64748b" font-size="26">完成单个签到</text>
-
-                                <!-- 退出流程 -->
-                                <circle cx="900" cy="150" r="40" fill="#ef4444" stroke="#dc2626" stroke-width="3"/>
-                                <text x="900" y="150" text-anchor="middle" fill="white" font-weight="bold" font-size="22" dy="8">X</text>
-                                <text x="900" y="210" text-anchor="middle" fill="#1e293b" font-weight="600" font-size="30">用户登出</text>
-                                <text x="900" y="240" text-anchor="middle" fill="#64748b" font-size="26">注销信息</text>
-
-                                <!-- 流程标签 -->
-                                <text x="200" y="50" text-anchor="middle" fill="#06b6d4" font-weight="bold" font-size="28">主流程</text>
-                                <text x="250" y="300" text-anchor="middle" fill="#10b981" font-weight="bold" font-size="28">自动流程</text>
-                                <text x="550" y="300" text-anchor="middle" fill="#3b82f6" font-weight="bold" font-size="28">手动流程</text>
-
-                                <!-- 箭头定义 -->
-                                <defs>
-                                    <marker id="arrowhead" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
-                                        <polygon points="0 0, 12 4.5, 0 9" fill="#06b6d4"/>
-                                    </marker>
-                                    <marker id="arrowhead-green" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
-                                        <polygon points="0 0, 12 4.5, 0 9" fill="#10b981"/>
-                                    </marker>
-                                    <marker id="arrowhead-blue" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
-                                        <polygon points="0 0, 12 4.5, 0 9" fill="#3b82f6"/>
-                                    </marker>
-                                    <marker id="arrowhead-red" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
-                                        <polygon points="0 0, 12 4.5, 0 9" fill="#ef4444"/>
-                                    </marker>
-                                </defs>
-                            </svg>
-                        </div>
-                    </div>
-
-                    <!-- 说明信息 -->
-                    <div class="bg-blue-50 rounded-lg p-6 border border-blue-100">
-                        <h4 class="font-bold text-gray-800 mb-3 text-lg">使用说明</h4>
-                        <div class="space-y-2 text-gray-700">
-                            <p class="flex items-start">
-                                <i class="fas fa-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
-                                <span>本系统为西安石油大学校园签到辅助工具</span>
-                            </p>
-                            <p class="flex items-start">
-                                <i class="fas fa-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
-                                <span>支持自动签到和手动签到两种模式</span>
-                            </p>
-                            <p class="flex items-start">
-                                <i class="fas fa-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
-                                <span>请遵守学校规定，诚信使用签到系统</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="border-t border-gray-200 p-6">
-                <div class="flex justify-between items-center">
-                    <p class="text-sm text-gray-500">
-                        <i class="far fa-copyright mr-1"></i> --@hongchu@--
-                    </p>
-                    <button @click="closeAboutModal"
-                            class="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors">
-                        关闭
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 注销确认模态框 -->
-    <div :class="{'active': showLogoutConfirmModal}" class="modal-overlay">
-        <div class="modal-box w-full max-w-md mx-4">
-            <div class="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
-                <div class="flex items-center">
-                    <i class="fas fa-exclamation-triangle text-xl mr-3"></i>
-                    <h3 class="text-xl font-bold">确认注销</h3>
-                </div>
-            </div>
-
-            <div class="p-6">
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-sign-out-alt text-red-500 text-2xl"></i>
-                    </div>
-                    <h4 class="text-lg font-semibold text-gray-800 mb-2">确认要注销吗？</h4>
-                    <p class="text-gray-600">
-                        注销后，您的个人信息将从系统中移除,不会再自动签到。<br>
-                        下次使用需要重新登录。
-                    </p>
-                </div>
-            </div>
-
-            <div class="border-t border-gray-200 p-6">
-                <div class="flex justify-center gap-4">
-                    <button @click="cancelLogout"
-                            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                        取消
-                    </button>
-                    <button @click="confirmLogout"
-                            class="bg-red-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors flex items-center">
-                        <i class="fas fa-sign-out-alt mr-2"></i>
-                        确认注销
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- 注销信息确认模态框 -->
+    <unregister-confirm-modal :visible="showUnregisterConfirmModal"
+                             @close="closeUnregisterConfirm"
+                             @confirm="handleUnregister">
+    </unregister-confirm-modal>
 
     <!-- 消息提示 -->
     <div v-if="message"
-         :class="messageType === 'success' ? 'bg-green-500' : 'bg-red-500'"
+         :class="messageType === 'success' ? 'bg-rose-400' : 'bg-pink-400'"
          class="fixed top-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg z-50 max-w-md">
         <div class="flex items-center justify-between">
             <div class="flex items-center">
@@ -738,533 +224,26 @@
     </div>
 </div>
 
-<script>
-    // API基础URL
-    const API_BASE = window.location.origin.includes('localhost')
-        ? 'http://localhost:11451'
-        : window.location.origin;
+<!-- 工具类 -->
+<script src="js/utils/crypto.js"></script>
+<script src="js/utils/api.js"></script>
 
-    // AES加密函数
-    function simpleEncrypt(text, key = "1234567890123456") {
-        const keyBytes = CryptoJS.enc.Utf8.parse(key);
-        return CryptoJS.AES.encrypt(text, keyBytes, {
-            mode: CryptoJS.mode.ECB,
-            padding: CryptoJS.pad.Pkcs7
-        }).toString();
-    }
+<!-- 组件 -->
+<script src="js/components/LoginPage.js"></script>
+<script src="js/components/HeaderNav.js"></script>
+<script src="js/components/SignList.js"></script>
+<script src="js/components/SignDetailModal.js"></script>
+<script src="js/components/UserProfileModal.js"></script>
+<script src="js/components/AboutModal.js"></script>
+<script src="js/components/UnregisterConfirmModal.js"></script>
+<script src="js/components/AdminPage.js"></script>
+<script src="js/components/TaskConfigPage.js"></script>
+<script src="js/components/RedisQueuePage.js"></script>
+<script src="js/components/AnnouncementPage.js"></script>
+<script src="js/components/HomePage.js"></script>
+<script src="js/components/BottomNav.js"></script>
 
-    // 创建Vue实例
-    new Vue({
-        el: '#app',
-        data: {
-            // 状态
-            isLoggedIn: false,
-            isLoading: false,
-            isUpdating: false,
-            error: '',
-            message: '',
-            messageType: 'success',
-            showDetailModal: false,
-            showEditProfileModal: false,
-            showUserMenu: false,
-            showAboutModal: false,
-            showLogoutConfirmModal: false,
-
-            // 用户信息
-            userInfo: {
-                id: '',
-                name: '',
-                username: '',
-                email: '',
-                jwt: '',
-                autoSign: false
-            },
-
-            // 表单
-            loginForm: {
-                username: '',
-                password: ''
-            },
-            editForm: {
-                name: '',
-                email: ''
-            },
-
-            // 签到数据
-            signs: [],
-            selectedSign: {},
-            searchQuery: '',
-            filterStatus: null,
-
-            // 分页
-            currentPage: 1,
-            pageSize: 10,
-            total: 0
-        },
-        computed: {
-            // 过滤后的签到列表
-            filteredSigns: function() {
-                let filtered = this.signs;
-
-                // 搜索过滤
-                if (this.searchQuery) {
-                    const query = this.searchQuery.toLowerCase();
-                    filtered = filtered.filter(sign =>
-                        (sign.signTitle && sign.signTitle.toLowerCase().includes(query)) ||
-                        (sign.signContext && sign.signContext.toLowerCase().includes(query)) ||
-                        (sign.college && sign.college.toLowerCase().includes(query))
-                    );
-                }
-
-                // 状态过滤 - 修改为使用状态描述过滤
-                if (this.filterStatus !== null) {
-                    filtered = filtered.filter(sign => {
-                        const statusDesc = sign.signStatusDesc || this.getSignStatusDesc(sign);
-                        return statusDesc === this.filterStatus;
-                    });
-                }
-
-                return filtered;
-            },
-
-            // 待签到数量
-            pendingCount: function() {
-                return this.signs.filter(sign => {
-                    // 待签到的条件：signStatus=2且没有date字段，且在签到时间内
-                    if (sign.signStatus === 2 && !sign.date) {
-                        const currentTime = new Date().getTime();
-                        if (sign.start && sign.end) {
-                            return currentTime >= sign.start && currentTime <= sign.end;
-                        }
-                    }
-                    return false;
-                }).length;
-            },
-
-            // 总页数
-            totalPages: function () {
-                return Math.ceil(this.total / this.pageSize);
-            }
-        },
-        methods: {
-            // 工具函数
-            formatTime: function (timestamp) {
-                if (!timestamp) return '';
-                const date = new Date(timestamp);
-                return date.toLocaleTimeString('zh-CN', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            },
-
-            formatDateTime: function (timestamp) {
-                if (!timestamp) return '';
-                const date = new Date(timestamp);
-                return date.toLocaleString('zh-CN', {
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            },
-
-            formatDate: function (timestamp) {
-                if (!timestamp) return '';
-                const date = new Date(timestamp);
-                return date.toISOString().split('T')[0].replace(/-/g, '');
-            },
-
-            showMessage: function (msg, type) {
-                this.message = msg;
-                this.messageType = type || 'success';
-                setTimeout(() => {
-                    this.message = '';
-                }, 3000);
-            },
-
-            // 模态框控制
-            closeDetailModal: function () {
-                this.showDetailModal = false;
-            },
-
-            closeEditModal: function () {
-                this.showEditProfileModal = false;
-            },
-
-            toggleUserMenu: function () {
-                this.showUserMenu = !this.showUserMenu;
-                this.showDetailModal = false;
-                this.showEditProfileModal = false;
-            },
-
-            openSignDetail: function (sign) {
-                this.selectedSign = sign;
-                this.showUserMenu = false;
-                this.showEditProfileModal = false;
-                this.showDetailModal = true;
-            },
-
-            openEditProfile: function () {
-                this.editForm.name = this.userInfo.name || '';
-                this.editForm.email = this.userInfo.email || '';
-                this.showUserMenu = false;
-                this.showDetailModal = false;
-                this.showEditProfileModal = true;
-            },
-
-            openAbout: function() {
-                this.showUserMenu = false;
-                this.showDetailModal = false;
-                this.showEditProfileModal = false;
-                this.showAboutModal = true;
-            },
-
-            closeAboutModal: function() {
-                this.showAboutModal = false;
-            },
-
-            // 显示注销确认框
-            showLogoutConfirm: function() {
-                this.showUserMenu = false; // 关闭用户菜单
-                this.showLogoutConfirmModal = true;
-            },
-
-            // 取消注销
-            cancelLogout: function() {
-                this.showLogoutConfirmModal = false;
-            },
-
-            // 确认注销
-            confirmLogout: function() {
-                this.showLogoutConfirmModal = false;
-                this.logout(); // 调用原来的logout方法
-            },
-
-            // API请求
-            createRequest: function () {
-                const instance = axios.create({
-                    baseURL: API_BASE,
-                    timeout: 10000,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                // 请求拦截器
-                instance.interceptors.request.use(config => {
-                    if (this.userInfo.jwt) {
-                        config.headers.Authorization = `Bearer ${this.userInfo.jwt}`;
-                    }
-                    return config;
-                });
-
-                // 响应拦截器
-                instance.interceptors.response.use(
-                    response => response,
-                    error => {
-                        if (error.response && error.response.status === 401) {
-                            localStorage.removeItem('userInfo');
-                            this.isLoggedIn = false;
-                            this.showMessage('登录已过期，请重新登录', 'error');
-                        }
-                        return Promise.reject(error);
-                    }
-                );
-
-                return instance;
-            },
-            // 登录
-            login: function () {
-                const self = this;
-                self.isLoading = true;
-                self.error = '';
-
-                const request = this.createRequest();
-                const encryptedPassword = simpleEncrypt(this.loginForm.password);
-
-                request.post('/user/login', null, {
-                    params: {
-                        username: this.loginForm.username,
-                        psd: encryptedPassword
-                    }
-                })
-                    .then(response => {
-                        if (response.data.code === 200) {
-                            this.userInfo = response.data.data;
-                            this.isLoggedIn = true;
-                            localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
-                            this.showMessage('登录成功！');
-                            this.getAllSigns(1);
-                        } else {
-                            this.error = response.data.message || '登录失败';
-                            this.showMessage(this.error, 'error');
-                        }
-                    })
-                    .catch(err => {
-                        this.error = err.response?.data?.message || '登录请求失败';
-                        this.showMessage(this.error, 'error');
-                        console.error('登录错误:', err);
-                    })
-                    .finally(() => {
-                        self.isLoading = false;
-                    });
-            },
-            // 登出
-            logout: function () {
-                const request = this.createRequest();
-                request.post('/user/logout')
-                    .catch(err => console.error('登出错误:', err))
-                    .finally(() => {
-                        this.isLoggedIn = false;
-                        this.userInfo = {};
-                        this.signs = [];
-                        localStorage.removeItem('userInfo');
-                        this.loginForm = {username: '', password: ''};
-                        this.showMessage('已退出登录');
-                    });
-            },
-            // 切换自动签到
-            toggleAutoSign: function () {
-                const newAutoSign = !this.userInfo.autoSign;
-                const request = this.createRequest();
-
-                request.put(`/user/auto-sign/${newAutoSign}`)
-                    .then(() => {
-                        this.userInfo.autoSign = newAutoSign;
-                        this.showMessage(`自动签到已${newAutoSign ? '开启' : '关闭'}`);
-                        this.showUserMenu = false;
-                    })
-                    .catch(err => {
-                        this.showMessage('修改失败', 'error');
-                        console.error('修改自动签到错误:', err);
-                    });
-            },
-            // 更新用户信息
-            updateUserInfo: function () {
-                this.isUpdating = true;
-                const request = this.createRequest();
-                const params = {};
-
-                if (this.editForm.name) params.name = this.editForm.name;
-                if (this.editForm.email) params.email = this.editForm.email;
-
-                request.put('/user/info/', null, {params})
-                    .then(response => {
-                        if (response.data.code === 200) {
-                            this.userInfo.name = this.editForm.name || this.userInfo.name;
-                            this.userInfo.email = this.editForm.email || this.userInfo.email;
-                            this.showEditProfileModal = false;
-                            this.showMessage('个人信息更新成功');
-                        }
-                    })
-                    .catch(err => {
-                        this.showMessage('更新失败', 'error');
-                        console.error('更新用户信息错误:', err);
-                    })
-                    .finally(() => {
-                        this.isUpdating = false;
-                    });
-            },
-            // 获取用户信息
-            getUserInfo: function () {
-                const request = this.createRequest();
-                request.get('/user/info')
-                    .then(response => {
-                        if (response.data.code === 0) {
-                            this.userInfo = response.data.data;
-                            this.isLoggedIn = true;
-                            localStorage.setItem('userInfo', JSON.stringify(this.userInfo));
-                            this.getAllSigns(1);
-                        }
-                    })
-            },
-            // 获取所有签到
-            getAllSigns: function (page) {
-                this.isLoading = true;
-                const request = this.createRequest();
-
-                request.get('/sign/allSign', {
-                    params: {page: page || 1, size: this.pageSize}
-                })
-                    .then(response => {
-                        if (response.data.code === 200) {
-                            this.signs = response.data.data || [];
-                            this.total = this.signs.length;
-                            this.currentPage = page || 1;
-                        }
-                    })
-                    .catch(err => {
-                        this.showMessage('获取签到列表失败', 'error');
-                        console.error('获取签到列表错误:', err);
-                    })
-                    .finally(() => {
-                        this.isLoading = false;
-                    });
-            },
-            // 一键签到
-            oneKeySign: function () {
-                if (this.pendingCount === 0) {
-                    this.showMessage('没有待签到的任务', 'error');
-                    return;
-                }
-
-                this.isLoading = true;
-                const request = this.createRequest();
-
-                request.post('/sign/all')
-                    .then(() => {
-                        this.showMessage('一键签到成功！');
-                        this.getAllSigns(this.currentPage);
-                    })
-                    .catch(err => {
-                        this.showMessage('一键签到失败', 'error');
-                        console.error('一键签到错误:', err);
-                    })
-                    .finally(() => {
-                        this.isLoading = false;
-                    });
-            },
-            // 单个签到
-            signSingle: function (sign) {
-                this.isLoading = true;
-                const request = this.createRequest();
-                const params = {
-                    id: sign.id,
-                    signId: sign.signId,
-                    schoolId: sign.schoolId,
-                    inArea: 1
-                };
-                if (sign.latitude) params.latitude = sign.latitude;
-                if (sign.longitude) params.longitude = sign.longitude;
-                if (sign.areaList) params.areaJSON = JSON.stringify(sign.areaList);
-
-                request.post('/sign/one', null, {params})
-                    .then(() => {
-                        this.showMessage('签到成功！');
-                        this.getAllSigns(this.currentPage);
-                        this.showDetailModal = false;
-                    })
-                    .catch(err => {
-                        this.showMessage('签到失败', 'error');
-                        console.error('单个签到错误:', err);
-                    })
-                    .finally(() => {
-                        this.isLoading = false;
-                    });
-            },
-            // 获取签到状态描述
-            getSignStatusDesc: function(sign) {
-                if (!sign) return '未知';
-
-                // 如果有后端直接返回的signStatusDesc，优先使用
-                if (sign.signStatusDesc) {
-                    return sign.signStatusDesc;
-                }
-
-                // 否则根据字段判断
-                if (sign.date && sign.signStatus === 2) {
-                    return '已签到';
-                } else if (!sign.date && sign.signStatus === 2) {
-                    const currentTime = new Date().getTime();
-                    if (sign.end && currentTime > sign.end) {
-                        return '已过期';
-                    }
-                    return '待签到';
-                }
-                return '未知';
-            },
-            // 获取签到状态CSS类
-            getSignStatusClass: function(sign) {
-                if (!sign) return 'bg-gray-100 text-gray-800';
-
-                // 根据signStatusDesc判断颜色
-                const status = sign.signStatusDesc || this.getSignStatusDesc(sign);
-
-                switch(status) {
-                    case '已签到':
-                        return 'bg-green-100 text-green-800';
-                    case '待签到':
-                        return 'bg-yellow-100 text-yellow-800';
-                    case '已过期':
-                        return 'bg-red-100 text-red-800';
-                    case '未开始':
-                        return 'bg-blue-100 text-blue-800';
-                    default:
-                        return 'bg-gray-100 text-gray-800';
-                }
-            },
-            // 判断是否可以签到
-            isValidSign: function(sign) {
-                if (!sign) return false;
-
-                // 根据Java实体类的isValidSign方法
-                // 已签到的不可以再签
-                if (sign.date && sign.signStatus === 2) return false;
-
-                // 检查是否在签到时间内
-                const currentTime = new Date().getTime();
-                if (sign.start && sign.end) {
-                    return currentTime >= sign.start && currentTime <= sign.end;
-                }
-
-                return false;
-            },
-
-            // 分页
-            prevPage: function () {
-                if (this.currentPage > 1) {
-                    this.getAllSigns(this.currentPage - 1);
-                }
-            },
-
-            nextPage: function () {
-                if (this.currentPage < this.totalPages) {
-                    this.getAllSigns(this.currentPage + 1);
-                }
-            },
-
-            // 初始化
-            init: function () {
-                // 关闭所有模态框
-                this.showDetailModal = false;
-                this.showEditProfileModal = false;
-                this.showUserMenu = false;
-                this.showAboutModal = false;
-                // 检查本地存储
-                const savedUserInfo = localStorage.getItem('userInfo');
-                if (savedUserInfo) {
-                    try {
-                        this.userInfo = JSON.parse(savedUserInfo);
-                        this.isLoggedIn = true;
-                        this.getAllSigns(1);
-                    } catch (e) {
-                        console.error('解析用户信息失败:', e);
-                        localStorage.removeItem('userInfo');
-                    }
-                }
-            }
-        },
-        mounted: function () {
-            this.init();
-
-            // 点击外部关闭用户菜单
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.relative') && !e.target.closest('.p-2')) {
-                    this.showUserMenu = false;
-                }
-            });
-
-            // ESC键关闭模态框
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    this.showDetailModal = false;
-                    this.showEditProfileModal = false;
-                    this.showUserMenu = false;
-                    this.showAboutModal = false;
-                }
-            });
-        }
-    });
-</script>
+<!-- 主应用 -->
+<script src="js/app.js"></script>
 </body>
 </html>

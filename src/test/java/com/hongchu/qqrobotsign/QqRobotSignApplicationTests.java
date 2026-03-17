@@ -1,8 +1,8 @@
 package com.hongchu.qqrobotsign;
 
-import com.hongchu.qqrobotsign.config.SignInfoConfig;
-import com.hongchu.qqrobotsign.config.TestUserConfig;
-import com.hongchu.qqrobotsign.config.UrlConfig;
+import com.hongchu.qqrobotsign.config.props.SignInfoConfig;
+import com.hongchu.qqrobotsign.config.props.TestUserConfig;
+import com.hongchu.qqrobotsign.config.props.UrlConfig;
 import com.hongchu.qqrobotsign.pojo.DTO.SignDTO;
 import com.hongchu.qqrobotsign.pojo.entity.SignItem;
 import com.hongchu.qqrobotsign.service.EmailService;

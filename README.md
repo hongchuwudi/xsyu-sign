@@ -10,13 +10,13 @@
 
 ### ✨ 核心特性
 
-- 🕒 **智能定时签到** - 每天18:30-20:30随机时间自动执行
+- 🕒 **数据库驱动定时任务** - 通过 TaskConfig 动态管理 cron，无需重启即可调整
+- 🔴 **Redis 延迟队列** - 随机延迟分散签到请求，避免并发风控
 - 📍 **位置模拟签到** - 支持校区位置自动识别
-- 🔐 **安全加密存储** - AES-256-GCM强加密用户凭证
-- 🔄 **多用户支持** - 支持多个用户同时管理
-- 📊 **签到状态监控** - 实时查看签到结果和历史记录
-
-好的！我来加上技术栈的图标，让这部分更美观：
+- 🔐 **安全加密存储** - RSA + AES 双重加密用户凭证
+- 🔄 **多用户支持** - 支持多个用户独立配置签到日和时段
+- 📊 **SPA 管理面板** - 纯前端 SPA，可视化配置任务和查看队列
+- 📢 **公告系统** - 支持后台发布公告，前端弹窗展示
 
 ## 🛠 技术栈
 
@@ -26,11 +26,16 @@
 
 **数据存储**
 - <img src="https://img.shields.io/badge/MySQL-8.0+-4479A1?style=flat-square&logo=mysql&logoColor=white" height="20"> MySQL 8.0+
+- <img src="https://img.shields.io/badge/Redis-7.0+-DC382D?style=flat-square&logo=redis&logoColor=white" height="20"> Redis 7.0+
 - <img src="https://img.shields.io/badge/MyBatis%20Plus-3.5.10.1-000000?style=flat-square&logo=apache&logoColor=white" height="20"> MyBatis Plus 3.5.10.1
 
 **网络通信**
 - <img src="https://img.shields.io/badge/WebClient-Reactive-4A154B?style=flat-square&logo=spring&logoColor=white" height="20"> WebClient
-- <img src="https://img.shields.io/badge/Spring%20Task-Scheduling-6DB33F?style=flat-square&logo=spring&logoColor=white" height="20"> Spring Task
+- <img src="https://img.shields.io/badge/Spring%20Task-Scheduling-6DB33F?style=flat-square&logo=spring&logoColor=white" height="20"> Spring Task + CronTrigger
+
+**前端**
+- <img src="https://img.shields.io/badge/Vanilla%20JS-SPA-F7DF1E?style=flat-square&logo=javascript&logoColor=black" height="20"> 原生 JS SPA
+- <img src="https://img.shields.io/badge/Tailwind%20CSS-3.4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" height="20"> Tailwind CSS 3.4
 
 **构建工具**
 - <img src="https://img.shields.io/badge/Maven-3.6+-C71A36?style=flat-square&logo=apache-maven&logoColor=white" height="20"> Maven 3.6+
@@ -142,27 +147,57 @@ create index idx_username
 ## 📋 API 接口
 
 ### 用户管理
-- `POST /user/login` - 用户登录并获取JWSESSION
-- `DELETE /user/{username}` - 删除用户登录信息
+- `POST /user/login` - 用户登录并获取 JWSESSION
+- `POST /user/refresh-jws` - 刷新 JWSESSION
+- `PUT /user/{username}` - 更新用户信息（签到时间、签到日等）
+- `DELETE /user/{username}` - 删除用户
 
 ### 签到功能
-- `GET /sign/list` - 获取签到列表
-- `GET /sign/detail` - 获取签到详情
-- `POST /sign/do` - 执行签到
-- `POST /sign/auto` - 一键签到所有未完成项
+- `GET /sign/allSign` - 获取签到列表
+- `GET /sign/oneSign/{signId}/{schoolId}` - 获取签到详情
+- `POST /sign/all` - 当前用户一键签到
+- `POST /sign/all/{username}` - 管理员为指定用户一键签到
+- `POST /sign/all-all` - 管理员为所有用户一键签到
+- `POST /sign/one` - 处理单个签到
 
-## ⏰ 定时任务
+### 任务配置（管理员）
+- `GET /admin/task-configs` - 获取所有任务配置
+- `GET /admin/task-configs/{taskKey}` - 获取单个任务配置
+- `PUT /admin/task-configs/{taskKey}` - 更新任务配置（动态调整 cron）
 
-系统内置智能定时任务，在指定时间范围内随机执行签到：
+### Redis 队列监控（管理员）
+- `GET /admin/redis-queue` - 查看延迟队列中的待签到用户
+- `DELETE /admin/redis-queue` - 清空延迟队列
 
-```java
-@Scheduled(cron = "0 */1 18-20 * * ?")
-public void autoSignTask() {
-    // 每天18:00-20:59每分钟检查一次
-    // 为每个用户设置1-3分钟随机延迟
-    // 避免所有用户同时请求
-}
+## ⏰ 定时任务架构
+
+系统使用 **TaskConfig（数据库配置） + SchedulingManager + Redis 延迟队列** 三级架构：
+
 ```
+schedule_users (cron: 每天18:31)
+    │  筛选 autoSign=true 且今天在 signDays 内的用户
+    │  为每个用户计算随机延迟时间
+    ▼
+Redis Sorted Set (sign:queue)
+    │  score = 执行时间戳
+    │  每分钟轮询到期用户
+    ▼
+interval_sign (cron: 每1分钟, 18:00-20:59)
+    │  从 Redis 取出到期用户
+    │  逐个执行 signAll()
+    ▼
+签到完成 → 邮件通知
+```
+
+### 关键 Cron 配置
+
+| 任务 | 默认 cron | 说明 |
+|------|-----------|------|
+| schedule_users | `0 31 18 * * ?` | 每天 18:31 调度用户到 Redis 队列 |
+| interval_sign | `0 */1 18-20 * * ?` | 18:00-20:59 每分钟轮询执行 |
+| refresh_jws | `0 0 18 * * ?` | 每天 18:00 检查 JWS 续签 |
+
+> ⚠️ **容器部署注意**：Java 读取 `/etc/timezone` 而非 `TZ` 环境变量，Docker 容器需同时设置两者，否则 cron 触发时间会偏移。
 
 ## 🔒 安全特性
 
